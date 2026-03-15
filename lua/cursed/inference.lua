@@ -129,6 +129,7 @@ end
 --- Send a completion request to Ollama.
 --- @param prompt   string
 --- @param callback fun(response: string|nil, err: string|nil)
+--- @return fun() cancel  Call to abort the in-flight request and close the TCP socket.
 function M.complete(prompt, callback)
 	local cfg = config.get()
 	local host, port = parse_url(cfg.backend_url)
@@ -136,13 +137,25 @@ function M.complete(prompt, callback)
 	local json_body = vim.json.encode({
 		model = cfg.model,
 		prompt = prompt,
+		system = cfg.system_prompt,
 		stream = false,
 		temperature = cfg.temperature,
 		num_predict = cfg.max_tokens,
 	})
 
+	-- shared state so cancel() can reach the tcp handle even if created after cancel is called
+	local state = { tcp = nil, cancelled = false }
+
+	local function cancel()
+		state.cancelled = true
+		if state.tcp and not state.tcp:is_closing() then
+			state.tcp:close()
+		end
+	end
+
 	-- vim.uv TCP connect requires a resolved IP, not a hostname
 	vim.uv.getaddrinfo(host, nil, nil, function(err, res)
+		if state.cancelled then return end
 		if err or not res or not res[1] then
 			vim.schedule(function()
 				vim.notify("cursed: DNS resolution failed for " .. host, vim.log.levels.WARN)
@@ -168,9 +181,17 @@ function M.complete(prompt, callback)
 			return
 		end
 
+		state.tcp = tcp
+		if state.cancelled then
+			tcp:close()
+			return
+		end
+
 		local chunks = {}
 		tcp:connect(ip, port, on_connect(tcp, build_http_request(host, port, json_body), chunks, callback))
 	end)
+
+	return cancel
 end
 
 return M
