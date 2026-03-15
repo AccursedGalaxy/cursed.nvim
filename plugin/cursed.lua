@@ -7,3 +7,7 @@ if vim.g.loaded_cursed then
 	return
 end
 vim.g.loaded_cursed = true
+
+vim.api.nvim_create_user_command("Cursed", function()
+	require("cursed").hello()
+end, { desc = "Test that cursed.nvim is working" })
