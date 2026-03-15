@@ -6,6 +6,8 @@ M.defaults = {
 	max_tokens = 150,
 	temperature = 0.2,
 	debounce_ms = 400,
+	lines_above = 20,
+	lines_below = 5,
 }
 
 function M.get()
