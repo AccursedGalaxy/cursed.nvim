@@ -1,10 +1,12 @@
 # cursed.nvim
 
-A Neovim plugin. _What does it do? That's the fun part._
+Send your buffer's LSP diagnostics to Claude Code in a tmux pane — one command, no copy-pasting.
 
 ## Requirements
 
 - Neovim >= 0.11.0
+- [tmux](https://github.com/tmux/tmux) with at least one active session
+- [Claude Code](https://claude.ai/code) running inside a tmux pane
 
 ## Installation
 
@@ -15,13 +17,13 @@ A Neovim plugin. _What does it do? That's the fun part._
   "AccursedGalaxy/cursed.nvim",
   config = function()
     require("cursed").setup({
-      -- options
+      tmux = { pane_target = "{left}", auto_submit = true },
     })
   end,
 }
 ```
 
-**rocks.nvim**
+**rocks.nvim** (rocks.toml)
 
 ```toml
 [plugins]
@@ -30,23 +32,128 @@ A Neovim plugin. _What does it do? That's the fun part._
 
 ## Configuration
 
+All options are optional. Defaults are shown below.
+
 ```lua
 require("cursed").setup({
-  -- all options are optional
+  -- Transport
+  backend = "tmux",            -- only "tmux" is currently supported
+  tmux = {
+    pane_target = "{left}",    -- tmux target-pane: "{left}", "%3", "session:1.0", …
+    auto_submit = true,        -- press Enter after pasting so Claude responds immediately
+  },
+
+  -- What to collect
+  scope        = "buffer",     -- "buffer" | "all_buffers" | "workspace"
+  min_severity = vim.diagnostic.severity.HINT,  -- filter out below this level
+
+  -- How to format
+  format = "default",          -- "default" | "compact" | "with_source_lines" | function(d, bufnr)
+
+  -- Prompt wrapping (use {diagnostics} as placeholder)
+  templates = {
+    fix     = "Please fix these diagnostics:\n\n{diagnostics}",
+    explain = "Explain these diagnostics:\n\n{diagnostics}",
+    test    = "Write tests that cover these diagnostics:\n\n{diagnostics}",
+  },
+  default_template = nil,      -- template key to apply automatically, or nil
+
+  -- Auto-send on DiagnosticChanged
+  auto_send = {
+    enabled      = false,
+    event        = "DiagnosticChanged",
+    debounce_ms  = 500,        -- wait this long after the last event before sending
+    min_severity = vim.diagnostic.severity.ERROR,
+    scope        = "buffer",
+  },
+
+  keymap = nil,                -- e.g. "<leader>cd"  maps to :CursedSendDiags
 })
 ```
 
+### tmux pane target syntax
+
+`pane_target` accepts any tmux [target-pane](https://man.openbsd.org/tmux#COMMANDS) value:
+
+| Value | Meaning |
+|-------|---------|
+| `"{left}"` | The pane to the left of the current one (default) |
+| `"{right}"` | The pane to the right |
+| `"%3"` | Pane by ID |
+| `"mysession:1.0"` | Explicit session:window.pane |
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `:Cursed` | Verify the plugin is loaded |
+| `:CursedSendDiags [arg]` | Send diagnostics. Optional arg: scope (`buffer`, `all_buffers`, `workspace`) or template name (`fix`, `explain`, …) |
+| `:CursedPreview` | Preview and edit the formatted text before sending (`<CR>` to send, `q` to cancel) |
+| `:CursedPick` | Telescope picker to select individual diagnostics (requires [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)) |
+
 ## Usage
 
-`:Cursed` — verify the plugin is loaded and working.
+1. Open a file that has LSP diagnostics.
+2. Run `:CursedSendDiags` (or your keymap).
+3. Claude Code in the pane to your left receives the formatted diagnostics and — if `auto_submit = true` — starts processing them immediately.
 
-`:checkhealth cursed` — run the health check.
+**Send only errors:**
+```vim
+:CursedSendDiags    " uses your configured min_severity
+```
+
+**Send workspace-wide diagnostics wrapped in the "fix" template:**
+```vim
+:CursedSendDiags workspace
+" then manually pick a template, or set default_template = "fix"
+```
+
+**Preview before sending:**
+```vim
+:CursedPreview      " floating window — edit, then <CR> to send
+```
+
+## Statusline / lualine
+
+```lua
+-- lualine
+require("lualine").setup({
+  sections = {
+    lualine_x = { require("cursed.statusline").lualine },
+  },
+})
+
+-- or plain statusline
+vim.o.statusline = "%{%v:lua.require('cursed.statusline').component()%}"
+```
+
+## Hooks / autocmd events
+
+```lua
+vim.api.nvim_create_autocmd("User", {
+  pattern = "CursedPostSend",
+  callback = function(ev)
+    vim.notify(string.format("cursed: sent %d chars", #ev.data.text))
+  end,
+})
+```
+
+Events: `CursedPreSend`, `CursedPostSend`, `CursedSendFailed`. Each carries `data = { text, backend }`.
+
+## Health check
+
+```vim
+:checkhealth cursed
+```
+
+Verifies Neovim version, plugin load, `setup()` call, tmux installation, tmux server status, and LSP client presence.
 
 ## Development
 
 ```bash
-# run tests
-make test
+make test   # run tests (requires plenary.nvim)
+make lint   # check formatting with StyLua
+make fmt    # auto-format with StyLua
 ```
 
 ## License

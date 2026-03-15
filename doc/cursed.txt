@@ -1,0 +1,260 @@
+*cursed.txt*  Send LSP diagnostics to Claude Code
+
+Author:  AccursedGalaxy
+License: MIT
+Repo:    https://github.com/AccursedGalaxy/cursed.nvim
+
+==============================================================================
+CONTENTS                                                      *cursed-contents*
+
+  1. Introduction .......... |cursed|
+  2. Requirements .......... |cursed-requirements|
+  3. Installation .......... |cursed-installation|
+  4. Configuration ......... |cursed-configuration|
+  5. Commands .............. |cursed-commands|
+  6. Keymaps ............... |cursed-keymaps|
+  7. Events ................ |cursed-events|
+  8. Statusline ............ |cursed-statusline|
+  9. Health check .......... |cursed-health|
+
+==============================================================================
+INTRODUCTION                                              *cursed* *cursed.nvim*
+
+cursed.nvim sends your buffer's LSP diagnostics to Claude Code running in a
+tmux pane. One command pastes all current errors and warnings directly into
+your Claude Code session so you can ask for fixes without copy-pasting.
+
+Features:
+- Send diagnostics from the current buffer, all buffers, or the whole
+  workspace
+- Severity filtering, format control (default / compact / with source lines)
+- Prompt templates to wrap diagnostics before sending ("fix", "explain", ...)
+- Preview and edit the message in a floating window before sending
+- Auto-send on DiagnosticChanged with configurable debounce
+- User autocmd events (CursedPreSend, CursedPostSend, CursedSendFailed)
+- Statusline / lualine component showing last send time
+- Telescope picker for interactive multi-diagnostic selection
+
+==============================================================================
+REQUIREMENTS                                              *cursed-requirements*
+
+- Neovim >= 0.11.0
+- tmux (with at least one active session)
+- Claude Code running inside a tmux pane
+
+==============================================================================
+INSTALLATION                                              *cursed-installation*
+
+lazy.nvim: >lua
+  {
+    "AccursedGalaxy/cursed.nvim",
+    config = function()
+      require("cursed").setup({
+        tmux = { pane_target = "{left}", auto_submit = true },
+      })
+    end,
+  }
+<
+
+rocks.nvim (rocks.toml): >toml
+  [plugins]
+  "cursed.nvim" = "scm"
+<
+
+==============================================================================
+CONFIGURATION                                             *cursed-configuration*
+
+Pass a table to |cursed.setup()|. All keys are optional; unset keys use the
+defaults shown below. Passing unknown keys is allowed (they are merged through
+without validation).
+
+>lua
+  require("cursed").setup({
+    -- Transport
+    backend          = "tmux",       -- string: "tmux" (only option for now)
+    tmux = {
+      pane_target    = "{left}",     -- string: tmux target-pane syntax
+      auto_submit    = true,         -- boolean: send Enter after pasting
+    },
+
+    -- What to collect
+    scope            = "buffer",     -- "buffer" | "all_buffers" | "workspace"
+    min_severity     = vim.diagnostic.severity.HINT,  -- number
+
+    -- How to format
+    format           = "default",    -- "default" | "compact" |
+                                     -- "with_source_lines" | function(d, bufnr)
+
+    -- Prompt wrapping
+    templates = {
+      fix     = "Please fix these diagnostics:\n\n{diagnostics}",
+      explain = "Explain these diagnostics:\n\n{diagnostics}",
+      test    = "Write tests that cover these diagnostics:\n\n{diagnostics}",
+    },
+    default_template = nil,          -- string | nil: template key to use by default
+
+    -- Auto-send
+    auto_send = {
+      enabled        = false,        -- boolean
+      event          = "DiagnosticChanged",  -- string: autocmd event
+      debounce_ms    = 500,          -- number: ms to wait after last event
+      min_severity   = vim.diagnostic.severity.ERROR,
+      scope          = "buffer",
+    },
+
+    -- Keymap
+    keymap           = nil,          -- string | nil: e.g. "<leader>cd"
+  })
+<
+
+Options ~
+
+`backend` (string, default: `"tmux"`)
+  Transport backend. Currently only `"tmux"` is supported.
+
+`tmux.pane_target` (string, default: `"{left}"`)
+  tmux pane address. Accepts any valid tmux target-pane syntax:
+  - `"{left}"` — pane to the left of the current one
+  - `"myclaude"` — named session
+  - `"%3"` — pane by ID
+  - `"mysession:1.0"` — session:window.pane
+
+`tmux.auto_submit` (boolean, default: `true`)
+  Send Enter after pasting so Claude processes the message immediately.
+
+`scope` (string, default: `"buffer"`)
+  Which diagnostics to collect:
+  - `"buffer"` — current buffer only
+  - `"all_buffers"` — all loaded buffers
+  - `"workspace"` — all buffers with an active LSP client
+
+`min_severity` (number, default: `vim.diagnostic.severity.HINT`)
+  Minimum severity to include. Lower numbers = more severe:
+    ERROR=1, WARN=2, INFO=3, HINT=4
+  Use `vim.diagnostic.severity.ERROR` to send errors only.
+
+`format` (string|function, default: `"default"`)
+  Output format:
+  - `"default"` — `[ERROR] 12:5  message (source)`
+  - `"compact"` — `file.lua:12:5: ERROR: message`
+  - `"with_source_lines"` — like default, plus the erroneous source line
+  - function — `fn(diag, bufnr) -> string` called per diagnostic
+
+`templates` (table)
+  Named templates for wrapping the diagnostics block. Use `{diagnostics}` as
+  the placeholder. Add any key name; pass it to |:CursedSendDiags|.
+
+`default_template` (string|nil, default: `nil`)
+  Template to apply automatically on every send. `nil` means no wrapping.
+
+`auto_send.enabled` (boolean, default: `false`)
+  Enable automatic sending when diagnostics change.
+
+`auto_send.debounce_ms` (number, default: `500`)
+  Wait this many milliseconds after the last event before sending. Prevents
+  flooding when diagnostics update rapidly during typing.
+
+`auto_send.min_severity` (number, default: `vim.diagnostic.severity.ERROR`)
+  Auto-send only triggers for diagnostics at or above this severity.
+
+`keymap` (string|nil, default: `nil`)
+  Normal-mode keymap mapped to |:CursedSendDiags|. Example: `"<leader>cd"`.
+
+==============================================================================
+COMMANDS                                                      *cursed-commands*
+
+:Cursed                                                             *:Cursed*
+  Display a notification confirming the plugin is loaded. Useful for
+  verifying your install.
+
+:CursedSendDiags [{arg}]                                    *:CursedSendDiags*
+  Collect and send diagnostics to the configured Claude Code pane.
+
+  Optional {arg} is either:
+  - A scope: `buffer`, `all_buffers`, `workspace` — overrides `config.scope`
+    for this send only.
+  - A template name: `fix`, `explain`, or any key in `config.templates` —
+    wraps the diagnostics block in the template before sending.
+
+  Examples: >
+    :CursedSendDiags
+    :CursedSendDiags workspace
+    :CursedSendDiags explain
+<
+
+:CursedPreview                                              *:CursedPreview*
+  Open a floating window containing the formatted diagnostic text. You can
+  edit the text freely before sending. See |cursed-keymaps| for controls.
+
+:CursedPick                                                   *:CursedPick*
+  (Requires telescope.nvim) Opens a Telescope picker listing all diagnostics
+  from loaded buffers. Select one to send it immediately.
+  Only registered when telescope.nvim is detected at startup.
+
+==============================================================================
+KEYMAPS                                                       *cursed-keymaps*
+
+Inside the |:CursedPreview| floating window: ~
+
+  <CR>    Send the (possibly edited) content to Claude Code and close.
+  q       Close without sending.
+  <Esc>   Close without sending.
+
+==============================================================================
+EVENTS                                                         *cursed-events*
+
+cursed.nvim fires |User| autocmds you can hook into from other plugins or
+your own config. All events pass a `data` table.
+
+  `CursedPreSend`     Fired before sending. data: `{ text, backend }`
+  `CursedPostSend`    Fired after a successful send. data: `{ text, backend }`
+  `CursedSendFailed`  Fired after a failed send. data: `{ text, backend }`
+
+Example: >lua
+  vim.api.nvim_create_autocmd("User", {
+    pattern = "CursedPostSend",
+    callback = function(ev)
+      vim.notify(string.format("cursed: sent %d chars", #ev.data.text))
+    end,
+  })
+<
+
+==============================================================================
+STATUSLINE                                                 *cursed-statusline*
+
+`lua/cursed/statusline.lua` exposes a component showing send status.
+
+`require("cursed.statusline").component()` → `string`
+  Returns a string like `"cursed: sent 4s ago"`, `"cursed: sending…"`, or
+  `""` when nothing has been sent yet.
+
+`require("cursed.statusline").lualine` → `table`
+  A ready-made lualine component table with a `cond` that hides it when
+  nothing has been sent.
+
+lualine integration: >lua
+  require("lualine").setup({
+    sections = {
+      lualine_x = { require("cursed.statusline").lualine },
+    },
+  })
+<
+
+Manual statusline integration: >lua
+  vim.o.statusline = "%{%v:lua.require('cursed.statusline').component()%}"
+<
+
+==============================================================================
+HEALTH CHECK                                                   *cursed-health*
+
+Run `:checkhealth cursed` to verify:
+
+  ✓ Neovim >= 0.11.0
+  ✓ plugin loaded (vim.g.loaded_cursed)
+  ✓ setup() has been called
+  ✓ tmux is installed (found in PATH)
+  ✓ tmux server is running (tmux list-sessions exits 0)
+  ✓ LSP clients active (info only — plugin works without LSP loaded)
+
+==============================================================================
+ vim:tw=78:ts=8:ft=help:norl:

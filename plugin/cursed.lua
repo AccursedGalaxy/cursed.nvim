@@ -12,6 +12,29 @@ vim.api.nvim_create_user_command("Cursed", function()
 	require("cursed").hello()
 end, { desc = "Test that cursed.nvim is working" })
 
-vim.api.nvim_create_user_command("CursedSendDiags", function()
-	require("cursed").send_diagnostics()
-end, { desc = "Send LSP diagnostics to Claude Code tmux pane" })
+vim.api.nvim_create_user_command("CursedSendDiags", function(cmd_opts)
+	local arg = vim.trim(cmd_opts.args or "")
+	local opts = {}
+	if arg ~= "" then
+		local scopes = { buffer = true, all_buffers = true, workspace = true }
+		if scopes[arg] then
+			opts.scope = arg
+		else
+			opts.template = arg
+		end
+	end
+	require("cursed").send_diagnostics(opts)
+end, {
+	desc = "Send LSP diagnostics to Claude Code tmux pane",
+	nargs = "?",
+})
+
+vim.api.nvim_create_user_command("CursedPreview", function()
+	require("cursed").preview()
+end, { desc = "Preview diagnostics before sending to Claude Code" })
+
+if pcall(require, "telescope") then
+	vim.api.nvim_create_user_command("CursedPick", function()
+		require("cursed.pickers.telescope").pick()
+	end, { desc = "Pick diagnostics to send using Telescope" })
+end
