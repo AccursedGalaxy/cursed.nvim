@@ -14,7 +14,7 @@ function M.check()
 	if vim.g.loaded_cursed then
 		health.ok("plugin loaded")
 	else
-		health.warn("plugin not loaded — did you call require('cursed').setup()?")
+		health.warn("plugin not loaded — is cursed.nvim in your runtimepath?")
 	end
 end
 

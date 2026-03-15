@@ -63,11 +63,19 @@ function M.send(opts)
 	vim.fn.writefile(vim.split(text, "\n"), tmp)
 	vim.fn.system({ "tmux", "load-buffer", "-b", "cursed_diag", tmp })
 	vim.fn.delete(tmp)
+	if vim.v.shell_error ~= 0 then
+		vim.notify("cursed: failed to load tmux buffer (is tmux running?)", vim.log.levels.ERROR)
+		return
+	end
 	vim.fn.system({ "tmux", "select-pane", "-t", pane_target })
 	vim.fn.system({ "tmux", "paste-buffer", "-b", "cursed_diag", "-t", pane_target })
+	if vim.v.shell_error ~= 0 then
+		vim.notify("cursed: failed to paste to tmux pane '" .. pane_target .. "'", vim.log.levels.ERROR)
+		return
+	end
 	if auto_submit then
 		vim.uv.sleep(50)
-		vim.fn.system({ "tmux", "send-keys", "-t", pane_target, "", "Enter" })
+		vim.fn.system({ "tmux", "send-keys", "-t", pane_target, "Enter" })
 	end
 end
 
