@@ -12,7 +12,7 @@ A Neovim plugin. _What does it do? That's the fun part._
 
 ```lua
 {
-  "yourusername/cursed.nvim",
+  "AccursedGalaxy/cursed.nvim",
   config = function()
     require("cursed").setup({
       -- options
