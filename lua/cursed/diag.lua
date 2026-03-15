@@ -24,13 +24,9 @@ local function collect_diags(scope, bufnr, min_severity)
 			end
 		end
 	elseif scope == "workspace" then
-		local seen = {}
-		for _, client in ipairs(vim.lsp.get_clients()) do
-			for buf in pairs(client.attached_buffers or {}) do
-				if not seen[buf] then
-					seen[buf] = true
-					vim.list_extend(diags, vim.diagnostic.get(buf))
-				end
+		for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+			if vim.api.nvim_buf_is_loaded(buf) and #vim.lsp.get_clients({ bufnr = buf }) > 0 then
+				vim.list_extend(diags, vim.diagnostic.get(buf))
 			end
 		end
 	else
@@ -181,7 +177,9 @@ local function apply_template(text, template_name)
 	if not tpl then
 		return text
 	end
-	return (tpl:gsub("{diagnostics}", text))
+	-- Use a function replacement so % in the diagnostics text is never
+	-- interpreted as a gsub capture reference (e.g. %1 in error messages).
+	return (tpl:gsub("{diagnostics}", function() return text end))
 end
 
 local function fire(event, data)
