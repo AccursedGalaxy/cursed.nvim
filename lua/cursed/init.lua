@@ -100,11 +100,22 @@ function M.preview()
 		close()
 		local cfg = M.config or {}
 		local tmux_cfg = cfg.tmux or {}
-		local transport = require("cursed.transport").get(cfg.backend or "tmux")
-		transport.send(final_text, {
+		local backend_name = cfg.backend or "tmux"
+		local statusline = require("cursed.statusline")
+		vim.api.nvim_exec_autocmds("User", { pattern = "CursedPreSend", data = { text = final_text, backend = backend_name } })
+		statusline._update("sending")
+		local transport = require("cursed.transport").get(backend_name)
+		local ok = transport.send(final_text, {
 			pane_target = tmux_cfg.pane_target or "{left}",
 			auto_submit = tmux_cfg.auto_submit,
 		})
+		if ok then
+			vim.api.nvim_exec_autocmds("User", { pattern = "CursedPostSend", data = { text = final_text, backend = backend_name } })
+			statusline._update("sent")
+		else
+			vim.api.nvim_exec_autocmds("User", { pattern = "CursedSendFailed", data = { text = final_text, backend = backend_name } })
+			statusline._update("failed")
+		end
 	end, { buffer = buf, desc = "Send diagnostics to Claude Code" })
 
 	vim.keymap.set("n", "q", close, { buffer = buf, desc = "Cancel preview" })

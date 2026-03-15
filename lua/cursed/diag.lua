@@ -216,6 +216,7 @@ function M.send(opts)
 	end
 
 	fire("CursedPreSend", { text = text, backend = backend_name })
+	require("cursed.statusline")._update("sending")
 
 	local transport = require("cursed.transport").get(backend_name)
 	local ok = transport.send(text, { pane_target = pane_target, auto_submit = auto_submit })

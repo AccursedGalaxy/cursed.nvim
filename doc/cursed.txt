@@ -120,7 +120,9 @@ Options ~
   - `"mysession:1.0"` — session:window.pane
 
 `tmux.auto_submit` (boolean, default: `true`)
-  Send Enter after pasting so Claude processes the message immediately.
+  Paste the text then send Enter after a short delay so Claude starts
+  processing. The Enter is sent asynchronously (~300 ms after the paste) to
+  avoid racing with Claude Code's input handler.
 
 `scope` (string, default: `"buffer"`)
   Which diagnostics to collect:
@@ -138,7 +140,8 @@ Options ~
   - `"default"` — `[ERROR] 12:5  message (source)`
   - `"compact"` — `file.lua:12:5: ERROR: message`
   - `"with_source_lines"` — like default, plus the erroneous source line
-  - function — `fn(diag, bufnr) -> string` called per diagnostic
+  - function — `fn(diag, bufnr) -> string|nil` called per diagnostic;
+    returning `nil` omits that diagnostic from the output
 
 `templates` (table)
   Named templates for wrapping the diagnostics block. Use `{diagnostics}` as
@@ -158,7 +161,8 @@ Options ~
   Auto-send only triggers for diagnostics at or above this severity.
 
 `keymap` (string|nil, default: `nil`)
-  Normal-mode keymap mapped to |:CursedSendDiags|. Example: `"<leader>cd"`.
+  Normal-mode keymap bound directly to `send_diagnostics()`. Equivalent to a
+  no-argument |:CursedSendDiags|. Example: `"<leader>cd"`.
 
 ==============================================================================
 COMMANDS                                                      *cursed-commands*
@@ -174,7 +178,8 @@ COMMANDS                                                      *cursed-commands*
   - A scope: `buffer`, `all_buffers`, `workspace` — overrides `config.scope`
     for this send only.
   - A template name: `fix`, `explain`, or any key in `config.templates` —
-    wraps the diagnostics block in the template before sending.
+    wraps the diagnostics block in the template before sending. An unrecognised
+    template name is silently ignored and the text is sent unwrapped.
 
   Examples: >
     :CursedSendDiags
@@ -188,7 +193,7 @@ COMMANDS                                                      *cursed-commands*
 
 :CursedPick                                                   *:CursedPick*
   (Requires telescope.nvim) Opens a Telescope picker listing all diagnostics
-  from loaded buffers. Select one to send it immediately.
+  from all loaded buffers (ignores `config.scope`). Select one to send it.
   Only registered when telescope.nvim is detected at startup.
 
 ==============================================================================
@@ -225,8 +230,11 @@ STATUSLINE                                                 *cursed-statusline*
 `lua/cursed/statusline.lua` exposes a component showing send status.
 
 `require("cursed.statusline").component()` → `string`
-  Returns a string like `"cursed: sent 4s ago"`, `"cursed: sending…"`, or
-  `""` when nothing has been sent yet.
+  Returns one of:
+  - `"cursed: sending…"` — a send is in progress
+  - `"cursed: sent Xs ago"` — last send succeeded
+  - `"cursed: failed Xs ago"` — last send failed
+  - `""` — nothing has been sent yet
 
 `require("cursed.statusline").lualine` → `table`
   A ready-made lualine component table with a `cond` that hides it when

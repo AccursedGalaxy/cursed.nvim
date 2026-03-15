@@ -40,7 +40,7 @@ require("cursed").setup({
   backend = "tmux",            -- only "tmux" is currently supported
   tmux = {
     pane_target = "{left}",    -- tmux target-pane: "{left}", "%3", "session:1.0", …
-    auto_submit = true,        -- press Enter after pasting so Claude responds immediately
+    auto_submit = true,        -- paste then send Enter (~300ms later, async) so Claude starts processing
   },
 
   -- What to collect
@@ -48,7 +48,7 @@ require("cursed").setup({
   min_severity = vim.diagnostic.severity.HINT,  -- filter out below this level
 
   -- How to format
-  format = "default",          -- "default" | "compact" | "with_source_lines" | function(d, bufnr)
+  format = "default",          -- "default" | "compact" | "with_source_lines" | function(d, bufnr) -> string|nil
 
   -- Prompt wrapping (use {diagnostics} as placeholder)
   templates = {
@@ -67,7 +67,7 @@ require("cursed").setup({
     scope        = "buffer",
   },
 
-  keymap = nil,                -- e.g. "<leader>cd"  maps to :CursedSendDiags
+  keymap = nil,                -- e.g. "<leader>cd"  bound directly to send_diagnostics()
 })
 ```
 
@@ -89,13 +89,13 @@ require("cursed").setup({
 | `:Cursed` | Verify the plugin is loaded |
 | `:CursedSendDiags [arg]` | Send diagnostics. Optional arg: scope (`buffer`, `all_buffers`, `workspace`) or template name (`fix`, `explain`, …) |
 | `:CursedPreview` | Preview and edit the formatted text before sending (`<CR>` to send, `q` to cancel) |
-| `:CursedPick` | Telescope picker to select individual diagnostics (requires [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)) |
+| `:CursedPick` | Telescope picker to select individual diagnostics from all loaded buffers (ignores `scope`; requires [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)) |
 
 ## Usage
 
 1. Open a file that has LSP diagnostics.
 2. Run `:CursedSendDiags` (or your keymap).
-3. Claude Code in the pane to your left receives the formatted diagnostics and — if `auto_submit = true` — starts processing them immediately.
+3. Claude Code in the pane to your left receives the formatted diagnostics and — if `auto_submit = true` — Enter is sent automatically (~300 ms later) so Claude starts processing.
 
 **Send only errors:**
 ```vim
