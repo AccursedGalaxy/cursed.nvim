@@ -18,8 +18,9 @@ function M.setup(opts)
 
 	M.config = merged
 
-	if M.config.keymap then
-		vim.keymap.set("n", M.config.keymap, M.send_diagnostics, {
+	local km = M.config.keymaps
+	if km.send and km.send ~= false then
+		vim.keymap.set("n", km.send, M.send_diagnostics, {
 			desc = "Send diagnostics to Claude Code tmux pane",
 		})
 	end
@@ -76,6 +77,7 @@ function M.preview()
 
 	local width = math.min(100, vim.o.columns - 4)
 	local height = math.min(30, vim.o.lines - 4)
+	local km = M.config.keymaps
 	local win = vim.api.nvim_open_win(buf, true, {
 		relative = "editor",
 		width = width,
@@ -84,7 +86,11 @@ function M.preview()
 		row = math.floor((vim.o.lines - height) / 2),
 		style = "minimal",
 		border = "rounded",
-		title = " cursed.nvim — preview (<CR> send · q cancel) ",
+		title = string.format(
+			" cursed.nvim — preview (%s send · %s cancel) ",
+			km.preview_send or "?",
+			km.preview_close or "?"
+		),
 		title_pos = "center",
 	})
 
@@ -94,7 +100,13 @@ function M.preview()
 		end
 	end
 
-	vim.keymap.set("n", "<CR>", function()
+	local function set_buf_km(lhs, rhs, desc)
+		if lhs and lhs ~= false then
+			vim.keymap.set("n", lhs, rhs, { buffer = buf, desc = desc })
+		end
+	end
+
+	set_buf_km(km.preview_send, function()
 		local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 		local final_text = table.concat(lines, "\n")
 		close()
@@ -102,7 +114,10 @@ function M.preview()
 		local tmux_cfg = cfg.tmux or {}
 		local backend_name = cfg.backend or "tmux"
 		local statusline = require("cursed.statusline")
-		vim.api.nvim_exec_autocmds("User", { pattern = "CursedPreSend", data = { text = final_text, backend = backend_name } })
+		vim.api.nvim_exec_autocmds(
+			"User",
+			{ pattern = "CursedPreSend", data = { text = final_text, backend = backend_name } }
+		)
 		statusline._update("sending")
 		local transport = require("cursed.transport").get(backend_name)
 		local ok = transport.send(final_text, {
@@ -110,16 +125,22 @@ function M.preview()
 			auto_submit = tmux_cfg.auto_submit,
 		})
 		if ok then
-			vim.api.nvim_exec_autocmds("User", { pattern = "CursedPostSend", data = { text = final_text, backend = backend_name } })
+			vim.api.nvim_exec_autocmds(
+				"User",
+				{ pattern = "CursedPostSend", data = { text = final_text, backend = backend_name } }
+			)
 			statusline._update("sent")
 		else
-			vim.api.nvim_exec_autocmds("User", { pattern = "CursedSendFailed", data = { text = final_text, backend = backend_name } })
+			vim.api.nvim_exec_autocmds(
+				"User",
+				{ pattern = "CursedSendFailed", data = { text = final_text, backend = backend_name } }
+			)
 			statusline._update("failed")
 		end
-	end, { buffer = buf, desc = "Send diagnostics to Claude Code" })
+	end, "Send diagnostics to Claude Code")
 
-	vim.keymap.set("n", "q", close, { buffer = buf, desc = "Cancel preview" })
-	vim.keymap.set("n", "<Esc>", close, { buffer = buf, desc = "Cancel preview" })
+	set_buf_km(km.preview_close, close, "Cancel preview")
+	set_buf_km(km.preview_close_esc, close, "Cancel preview")
 end
 
 function M.hello()

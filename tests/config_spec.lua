@@ -9,7 +9,7 @@ describe("cursed.validate", function()
 			scope = "buffer",
 			min_severity = vim.diagnostic.severity.HINT,
 			format = "default",
-			keymap = "<leader>cd",
+			keymaps = { send = "<leader>cd", preview_send = "<CR>", preview_close = "q", preview_close_esc = "<Esc>" },
 			templates = { fix = "Fix: {diagnostics}" },
 			default_template = "fix",
 			auto_send = {
@@ -28,15 +28,26 @@ describe("cursed.validate", function()
 		assert.are.equal(0, #errors)
 	end)
 
-	it("allows nil keymap", function()
-		local errors = validate.validate({ keymap = nil })
+	it("allows nil keymaps (uses defaults)", function()
+		local errors = validate.validate({ keymaps = nil })
 		assert.are.equal(0, #errors)
 	end)
 
-	it("errors when keymap is not a string", function()
-		local errors = validate.validate({ keymap = true })
+	it("allows false to disable a keymap", function()
+		local errors = validate.validate({ keymaps = { send = false, preview_close_esc = false } })
+		assert.are.equal(0, #errors)
+	end)
+
+	it("errors when keymaps is not a table", function()
+		local errors = validate.validate({ keymaps = "nope" })
 		assert.are.equal(1, #errors)
-		assert.truthy(errors[1]:find("keymap"))
+		assert.truthy(errors[1]:find("keymaps"))
+	end)
+
+	it("errors when a keymaps entry is not a string or false", function()
+		local errors = validate.validate({ keymaps = { send = true } })
+		assert.are.equal(1, #errors)
+		assert.truthy(errors[1]:find("keymaps.send"))
 	end)
 
 	it("errors when tmux.auto_submit is a string instead of boolean", function()

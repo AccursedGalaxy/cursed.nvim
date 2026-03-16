@@ -22,7 +22,12 @@ M.defaults = {
 		min_severity = vim.diagnostic.severity.ERROR,
 		scope = "buffer",
 	},
-	keymap = nil,
+	keymaps = {
+		send = nil,
+		preview_send = "<CR>",
+		preview_close = "q",
+		preview_close_esc = "<Esc>",
+	},
 }
 
 return M

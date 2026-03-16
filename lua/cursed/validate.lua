@@ -56,8 +56,16 @@ function M.validate(config)
 		end
 	end
 
-	if config.keymap ~= nil and type(config.keymap) ~= "string" then
-		table.insert(errors, type_err("keymap", "string or nil", type(config.keymap)))
+	if config.keymaps ~= nil then
+		if type(config.keymaps) ~= "table" then
+			table.insert(errors, type_err("keymaps", "table", type(config.keymaps)))
+		else
+			for k, v in pairs(config.keymaps) do
+				if v ~= false and type(v) ~= "string" then
+					table.insert(errors, type_err("keymaps." .. k, "string or false", type(v)))
+				end
+			end
+		end
 	end
 
 	if config.templates ~= nil and type(config.templates) ~= "table" then
