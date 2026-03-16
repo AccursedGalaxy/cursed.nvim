@@ -37,6 +37,11 @@ function M.setup(opts)
 			desc = "Send diagnostics to Claude Code tmux pane",
 		})
 	end
+	if km.send_selection then
+		vim.keymap.set("x", km.send_selection, M.send_selection, {
+			desc = "Send visual selection to Claude Code tmux pane",
+		})
+	end
 
 	local as = M.config.auto_send
 	if as and as.enabled then
@@ -72,6 +77,10 @@ end
 
 function M.send_diagnostics(opts)
 	require("cursed.diag").send(opts)
+end
+
+function M.send_selection(opts)
+	require("cursed.selection").send(opts)
 end
 
 --- Send an arbitrary string to the configured tmux pane.

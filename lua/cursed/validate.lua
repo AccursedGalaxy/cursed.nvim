@@ -123,7 +123,7 @@ function M.validate(config)
 			if ps.delay_ms ~= nil and type(ps.delay_ms) ~= "number" then
 				table.insert(errors, type_err("pre_send.delay_ms", "number", type(ps.delay_ms)))
 			end
-			for _, feat in ipairs({ "send", "auto_send", "preview", "pick" }) do
+			for _, feat in ipairs({ "send", "auto_send", "preview", "pick", "selection" }) do
 				if ps[feat] ~= nil and ps[feat] ~= false then
 					table.insert(errors, type_err("pre_send." .. feat, "false or nil", type(ps[feat])))
 				end

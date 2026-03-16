@@ -54,12 +54,18 @@ require("cursed").setup({
                                -- or function(diag, bufnr) -> string|nil
 
   -- ── Prompt templates ───────────────────────────────────────────────────────
-  -- Use {diagnostics} as the placeholder for the formatted block.
-  -- Pass the key as an arg to :CursedSendDiags, e.g. :CursedSendDiags explain
+  -- Use {diagnostics} as the placeholder for the formatted content.
+  -- Pass the key as an arg to :CursedSendDiags or :CursedSendSelection,
+  -- e.g. :CursedSendDiags explain  or  :CursedSendSelection fix_selection
   templates = {
+    -- diagnostics templates
     fix     = "Please fix these diagnostics:\n\n{diagnostics}",
     explain = "Explain these diagnostics:\n\n{diagnostics}",
     test    = "Write tests that cover these diagnostics:\n\n{diagnostics}",
+    -- selection templates ({diagnostics} is replaced by the selected code)
+    fix_selection     = "Please fix the following code:\n\n{diagnostics}",
+    explain_selection = "Explain the following code:\n\n{diagnostics}",
+    review            = "Review the following code and suggest improvements:\n\n{diagnostics}",
   },
   default_template = nil,      -- apply a template automatically on every send, or nil
 
@@ -76,6 +82,7 @@ require("cursed").setup({
   -- Set any value to false to disable, or a string to remap.
   keymaps = {
     send              = nil,       -- global normal-mode: e.g. "<leader>cd" → send_diagnostics()
+    send_selection    = nil,       -- visual-mode: e.g. "<leader>cs" → send selected code
     preview_send      = "<CR>",    -- inside :CursedPreview: confirm & send
     preview_close     = "q",       -- inside :CursedPreview: close without sending
     preview_close_esc = "<Esc>",   -- inside :CursedPreview: close without sending (Esc)
@@ -93,6 +100,7 @@ require("cursed").setup({
     auto_send = nil,       -- nil: follows global  (consider false to reduce noise)
     preview   = nil,       -- nil: follows global  (:CursedPreview send action)
     pick      = nil,       -- nil: follows global  (:CursedPick send action)
+    selection = nil,       -- nil: follows global  (:CursedSendSelection / visual keymap)
   },
 })
 ```
@@ -108,7 +116,7 @@ require("cursed").setup({
 
 `auto_send` values are passed as explicit opts and **never fall back to the top-level globals**. If you set `min_severity = ERROR` at the top level expecting auto-send to follow, it will not — set `auto_send.min_severity` explicitly.
 
-**`pre_send`** resolves in three steps for each feature (`send`, `auto_send`, `preview`, `pick`):
+**`pre_send`** resolves in three steps for each feature (`send`, `auto_send`, `preview`, `pick`, `selection`):
 
 1. `pre_send.command = nil` → entire feature off; per-feature keys are ignored.
 2. `pre_send.<feature> = false` → disabled for that feature only.
@@ -155,6 +163,7 @@ Or from the command line: `:CursedSendCommand /clear`
 |---------|-------------|
 | `:Cursed` | Verify the plugin is loaded |
 | `:CursedSendDiags [arg]` | Send diagnostics. Optional arg: scope (`buffer`, `all_buffers`, `workspace`) or template name (`fix`, `explain`, …) |
+| `:CursedSendSelection [template]` | Send the current visual selection. Optional arg: template name (`fix_selection`, `explain_selection`, `review`, …). Without a template, prompts for an instruction. |
 | `:CursedPreview` | Preview and edit the formatted text before sending (keymaps configurable via `keymaps.*`) |
 | `:CursedPick` | Telescope picker to select individual diagnostics from all loaded buffers (ignores `scope`; requires [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)) |
 | `:CursedSendCommand {text}` | Send any raw string to the pane (e.g. `:CursedSendCommand /clear`) |
@@ -179,6 +188,21 @@ Or from the command line: `:CursedSendCommand /clear`
 **Preview before sending:**
 ```vim
 :CursedPreview      " floating window — edit, then send with keymaps.preview_send (default <CR>)
+```
+
+**Send a visual selection:**
+
+Select code in visual mode, then:
+```vim
+:'<,'>CursedSendSelection              " prompts for an instruction, then sends selection
+:'<,'>CursedSendSelection fix_selection " applies the fix_selection template immediately
+:'<,'>CursedSendSelection review        " asks Claude to review the selected code
+```
+
+Or bind the `send_selection` keymap and use it directly from visual mode:
+```lua
+keymaps = { send_selection = "<leader>cs" }
+-- In visual mode: select code, press <leader>cs, type your instruction
 ```
 
 ## Statusline / lualine

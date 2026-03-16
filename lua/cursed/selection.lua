@@ -1,0 +1,85 @@
+local M = {}
+
+--- Get the current visual selection: raw lines + metadata.
+--- Uses '< and '> marks, so call this after visual mode exits.
+--- @return table|nil { lines: string[], path: string, start_line: number, end_line: number }
+function M.get()
+	local bufnr = vim.api.nvim_get_current_buf()
+	local start_pos = vim.fn.getpos("'<")
+	local end_pos = vim.fn.getpos("'>")
+
+	local start_line = start_pos[2]
+	local end_line = end_pos[2]
+
+	if start_line == 0 and end_line == 0 then
+		return nil
+	end
+
+	-- nvim_buf_get_lines is 0-indexed, end is exclusive
+	local lines = vim.api.nvim_buf_get_lines(bufnr, start_line - 1, end_line, false)
+	if not lines or #lines == 0 then
+		return nil
+	end
+
+	return {
+		lines = lines,
+		path = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ":."),
+		start_line = start_line,
+		end_line = end_line,
+	}
+end
+
+local function dispatch(text, opts)
+	require("cursed.util").send_to_transport(text, {
+		feature = "selection",
+		backend = opts.backend,
+		pane_target = opts.pane_target,
+		auto_submit = opts.auto_submit,
+	})
+end
+
+--- Build the final message: optional user prompt, file context, raw code.
+--- @param sel table Result of M.get()
+--- @param prompt string|nil User's instruction (may be empty string)
+--- @return string
+local function build_message(sel, prompt)
+	local context = string.format("File: %s, lines %d-%d:", sel.path, sel.start_line, sel.end_line)
+	local code = table.concat(sel.lines, "\n")
+	if prompt and prompt ~= "" then
+		return prompt .. "\n\n" .. context .. "\n" .. code
+	end
+	return context .. "\n" .. code
+end
+
+--- Send the current visual selection to the configured backend.
+--- If opts.template is set, applies that template immediately (no prompt).
+--- Otherwise opens vim.ui.input so the user can type an instruction;
+--- the instruction is prepended before the file context and code.
+--- @param opts table|nil Optional overrides: template, pane_target, auto_submit, backend
+function M.send(opts)
+	opts = opts or {}
+
+	local sel = M.get()
+	if not sel then
+		vim.notify("cursed: no visual selection found", vim.log.levels.INFO)
+		return
+	end
+
+	-- Template path: used by :CursedSendSelection <template>
+	if opts.template then
+		local code = table.concat(sel.lines, "\n")
+		local text = require("cursed.diag").apply_template(code, opts.template)
+		dispatch(text, opts)
+		return
+	end
+
+	-- Interactive path: prompt for an instruction, then send
+	vim.ui.input({ prompt = "Claude: " }, function(input)
+		if input == nil then
+			return -- user cancelled
+		end
+		dispatch(build_message(sel, input), opts)
+	end)
+end
+
+return M

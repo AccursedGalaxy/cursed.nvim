@@ -183,7 +183,7 @@ function M.format_diagnostics(bufnr, opts)
 	end
 end
 
-local function apply_template(text, template_name)
+function M.apply_template(text, template_name)
 	local cfg = require("cursed.config").get()
 	local templates = cfg.templates or {}
 	local tpl = templates[template_name]
@@ -213,7 +213,7 @@ function M.send(opts)
 
 	local template_name = opts.template or cfg.default_template
 	if template_name then
-		text = apply_template(text, template_name)
+		text = M.apply_template(text, template_name)
 	end
 
 	require("cursed.util").send_to_transport(text, {

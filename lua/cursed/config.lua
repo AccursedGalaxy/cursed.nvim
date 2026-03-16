@@ -47,6 +47,9 @@ M.defaults = {
 		fix = "Please fix these diagnostics:\n\n{diagnostics}",
 		explain = "Explain these diagnostics:\n\n{diagnostics}",
 		test = "Write tests that cover these diagnostics:\n\n{diagnostics}",
+		fix_selection = "Please fix the following code:\n\n{diagnostics}",
+		explain_selection = "Explain the following code:\n\n{diagnostics}",
+		review = "Review the following code and suggest improvements:\n\n{diagnostics}",
 	},
 	default_template = nil,
 	auto_send = {
@@ -60,6 +63,7 @@ M.defaults = {
 	},
 	keymaps = {
 		send = nil,
+		send_selection = nil,
 		preview_send = "<CR>",
 		preview_close = "q",
 		preview_close_esc = "<Esc>",
@@ -72,6 +76,7 @@ M.defaults = {
 		auto_send = nil,
 		preview   = nil,
 		pick      = nil,
+		selection = nil,
 	},
 }
 

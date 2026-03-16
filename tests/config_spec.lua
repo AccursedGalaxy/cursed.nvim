@@ -38,6 +38,22 @@ describe("cursed.validate", function()
 		assert.are.equal(0, #errors)
 	end)
 
+	it("accepts send_selection keymap as a string", function()
+		local errors = validate.validate({ keymaps = { send_selection = "<leader>cs" } })
+		assert.are.equal(0, #errors)
+	end)
+
+	it("accepts send_selection keymap as false (disabled)", function()
+		local errors = validate.validate({ keymaps = { send_selection = false } })
+		assert.are.equal(0, #errors)
+	end)
+
+	it("errors when send_selection keymap is not a string or false", function()
+		local errors = validate.validate({ keymaps = { send_selection = true } })
+		assert.are.equal(1, #errors)
+		assert.truthy(errors[1]:find("keymaps.send_selection"))
+	end)
+
 	it("errors when keymaps is not a table", function()
 		local errors = validate.validate({ keymaps = "nope" })
 		assert.are.equal(1, #errors)
@@ -145,12 +161,13 @@ describe("cursed.validate", function()
 	it("accepts a valid pre_send config", function()
 		local errors = validate.validate({
 			pre_send = {
-				command  = "/clear",
-				delay_ms = 500,
+				command   = "/clear",
+				delay_ms  = 500,
 				send      = nil,
 				auto_send = false,
 				preview   = nil,
 				pick      = false,
+				selection = nil,
 			},
 		})
 		assert.are.equal(0, #errors)

@@ -48,3 +48,13 @@ end, {
 vim.api.nvim_create_user_command("CursedPick", function()
 	require("cursed.pickers.telescope").pick()
 end, { desc = "Pick diagnostics to send using Telescope" })
+
+vim.api.nvim_create_user_command("CursedSendSelection", function(cmd_opts)
+	local arg = vim.trim(cmd_opts.args or "")
+	local opts = arg ~= "" and { template = arg } or {}
+	require("cursed").send_selection(opts)
+end, {
+	desc = "Send visual selection to Claude Code tmux pane",
+	nargs = "?",
+	range = true,
+})
