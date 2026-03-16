@@ -109,6 +109,25 @@ function M.validate(config)
 		end
 	end
 
+	if config.pre_send ~= nil then
+		if type(config.pre_send) ~= "table" then
+			table.insert(errors, type_err("pre_send", "table", type(config.pre_send)))
+		else
+			local ps = config.pre_send
+			if ps.command ~= nil and type(ps.command) ~= "string" then
+				table.insert(errors, type_err("pre_send.command", "string or nil", type(ps.command)))
+			end
+			if ps.delay_ms ~= nil and type(ps.delay_ms) ~= "number" then
+				table.insert(errors, type_err("pre_send.delay_ms", "number", type(ps.delay_ms)))
+			end
+			for _, feat in ipairs({ "send", "auto_send", "preview", "pick" }) do
+				if ps[feat] ~= nil and ps[feat] ~= false then
+					table.insert(errors, type_err("pre_send." .. feat, "false or nil", type(ps[feat])))
+				end
+			end
+		end
+	end
+
 	return errors
 end
 

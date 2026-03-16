@@ -49,7 +49,7 @@ function M.setup(opts)
 							auto_send_timer:close()
 							auto_send_timer = nil
 						end
-						M.send_diagnostics({ scope = scope, min_severity = min_sev })
+						M.send_diagnostics({ scope = scope, min_severity = min_sev, from_auto_send = true })
 					end)
 				)
 			end,
@@ -59,6 +59,26 @@ end
 
 function M.send_diagnostics(opts)
 	require("cursed.diag").send(opts)
+end
+
+--- Send an arbitrary string to the configured tmux pane.
+--- Useful for keymaps that send fixed commands (e.g. "/clear", "/help").
+--- Respects tmux.pane_target and tmux.auto_submit from config.
+--- @param text string The text to send
+--- @param opts table|nil Optional overrides: pane_target (string), auto_submit (boolean)
+function M.send_command(text, opts)
+	opts = opts or {}
+	local cfg = M.config or {}
+	local tmux_cfg = cfg.tmux or {}
+	local transport = require("cursed.transport").get(cfg.backend or "tmux")
+	local auto_submit = opts.auto_submit
+	if auto_submit == nil then
+		auto_submit = tmux_cfg.auto_submit
+	end
+	transport.send(text, {
+		pane_target = opts.pane_target or tmux_cfg.pane_target or "{left}",
+		auto_submit = auto_submit,
+	})
 end
 
 --- Open a floating preview of the formatted diagnostics.
@@ -119,10 +139,13 @@ function M.preview()
 			{ pattern = "CursedPreSend", data = { text = final_text, backend = backend_name } }
 		)
 		statusline._update("sending")
+		local pre_cmd, pre_delay = require("cursed.util").resolve_pre_command("preview")
 		local transport = require("cursed.transport").get(backend_name)
 		local ok = transport.send(final_text, {
 			pane_target = tmux_cfg.pane_target or "{left}",
 			auto_submit = tmux_cfg.auto_submit,
+			pre_command = pre_cmd,
+			pre_command_delay_ms = pre_delay,
 		})
 		if ok then
 			vim.api.nvim_exec_autocmds(

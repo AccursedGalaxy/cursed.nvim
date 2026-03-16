@@ -28,6 +28,15 @@ M.defaults = {
 		preview_close = "q",
 		preview_close_esc = "<Esc>",
 	},
+	pre_send = {
+		command  = nil,   -- string|nil: command to send before diagnostics (e.g. "/clear")
+		delay_ms = 300,   -- ms to wait after the command before pasting diagnostics
+		-- per-feature overrides: nil = follow global, false = disable for this feature
+		send      = nil,
+		auto_send = nil,
+		preview   = nil,
+		pick      = nil,
+	},
 }
 
 return M

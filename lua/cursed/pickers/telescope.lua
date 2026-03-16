@@ -75,10 +75,13 @@ function M.pick()
 					local cursed = require("cursed")
 					local cfg = cursed.config or {}
 					local tmux_cfg = cfg.tmux or {}
+					local pre_cmd, pre_delay = require("cursed.util").resolve_pre_command("pick")
 					local transport = require("cursed.transport").get(cfg.backend or "tmux")
 					transport.send(text, {
 						pane_target = tmux_cfg.pane_target or "{left}",
 						auto_submit = tmux_cfg.auto_submit,
+						pre_command = pre_cmd,
+						pre_command_delay_ms = pre_delay,
 					})
 				end)
 				return true

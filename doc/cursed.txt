@@ -70,30 +70,33 @@ without validation).
 
 >lua
   require("cursed").setup({
-    -- Transport
+    -- ── Transport ────────────────────────────────────────────────────────
     backend          = "tmux",       -- string: "tmux" (only option for now)
     tmux = {
       pane_target    = "{left}",     -- string: tmux target-pane syntax
-      auto_submit    = true,         -- boolean: send Enter after pasting
+      auto_submit    = true,         -- true  → paste + Enter (Claude starts immediately)
+                                     -- false → paste only; edit in pane, press Enter yourself
     },
 
-    -- What to collect
+    -- ── What to collect ──────────────────────────────────────────────────
     scope            = "buffer",     -- "buffer" | "all_buffers" | "workspace"
-    min_severity     = vim.diagnostic.severity.HINT,  -- number
+    min_severity     = vim.diagnostic.severity.HINT,  -- HINT=4 INFO=3 WARN=2 ERROR=1
 
-    -- How to format
+    -- ── How to format ────────────────────────────────────────────────────
     format           = "default",    -- "default" | "compact" |
                                      -- "with_source_lines" | function(d, bufnr)
 
-    -- Prompt wrapping
+    -- ── Prompt templates ─────────────────────────────────────────────────
+    -- {diagnostics} is replaced with the formatted block.
+    -- Pass the key as arg to :CursedSendDiags, e.g. :CursedSendDiags explain
     templates = {
       fix     = "Please fix these diagnostics:\n\n{diagnostics}",
       explain = "Explain these diagnostics:\n\n{diagnostics}",
       test    = "Write tests that cover these diagnostics:\n\n{diagnostics}",
     },
-    default_template = nil,          -- string | nil: template key to use by default
+    default_template = nil,          -- string | nil: applied automatically on every send
 
-    -- Auto-send
+    -- ── Auto-send on DiagnosticChanged ────────────────────────────────────
     auto_send = {
       enabled        = false,        -- boolean
       event          = "DiagnosticChanged",  -- string: autocmd event
@@ -102,12 +105,26 @@ without validation).
       scope          = "buffer",
     },
 
-    -- Keymaps (set any value to false to disable)
+    -- ── Keymaps ───────────────────────────────────────────────────────────
+    -- Set any value to false to disable, or a string to remap.
     keymaps = {
       send              = nil,       -- string | nil: global, e.g. "<leader>cd"
       preview_send      = "<CR>",    -- confirm & send inside preview window
       preview_close     = "q",       -- close preview without sending
       preview_close_esc = "<Esc>",   -- close preview without sending (Esc)
+    },
+
+    -- ── Pre-send command ──────────────────────────────────────────────────
+    -- Sends a command to the pane before pasting diagnostics.
+    -- command = nil disables the feature entirely.
+    -- Per-feature: nil = follow global, false = suppress for that feature.
+    pre_send = {
+      command   = nil,     -- string | nil: e.g. "/clear"; nil = feature off
+      delay_ms  = 300,     -- number: ms to wait after command before pasting
+      send      = nil,     -- nil: follows global  (manual send / keymap)
+      auto_send = nil,     -- nil: follows global  (consider false to reduce noise)
+      preview   = nil,     -- nil: follows global  (:CursedPreview send action)
+      pick      = nil,     -- nil: follows global  (:CursedPick send action)
     },
   })
 <
@@ -182,6 +199,24 @@ Options ~
   `keymaps.preview_close_esc` (string|false, default: `"<Esc>"`)
     Inside |:CursedPreview|: close without sending (Esc variant).
 
+`pre_send` (table)
+  Send a command to the tmux pane *before* pasting diagnostics. Useful for
+  running `/clear` to reset Claude Code's context between sends.
+
+  `pre_send.command` (string|nil, default: `nil`)
+    The command string to send. `nil` disables the feature entirely.
+    Example: `"/clear"`
+
+  `pre_send.delay_ms` (number, default: `300`)
+    Milliseconds to wait after sending the command and before pasting the
+    diagnostics. Gives Claude Code time to process the command.
+
+  Per-feature keys: `pre_send.send`, `pre_send.auto_send`, `pre_send.preview`,
+  `pre_send.pick` (false|nil, default: `nil`)
+    Set to `false` to suppress the pre-send command for that specific feature.
+    `nil` means the feature follows the global `pre_send.command` setting.
+    Example: set `auto_send = false` to skip `/clear` on automatic sends.
+
 ==============================================================================
 COMMANDS                                                      *cursed-commands*
 
@@ -213,6 +248,22 @@ COMMANDS                                                      *cursed-commands*
   (Requires telescope.nvim) Opens a Telescope picker listing all diagnostics
   from all loaded buffers (ignores `config.scope`). Select one to send it.
   Only registered when telescope.nvim is detected at startup.
+
+:CursedSendCommand {text}                              *:CursedSendCommand*
+  Send an arbitrary string to the configured Claude Code tmux pane. Respects
+  `tmux.pane_target` and `tmux.auto_submit` from config.
+
+  Examples: >
+    :CursedSendCommand /clear
+    :CursedSendCommand /help
+<
+  From Lua (e.g. in a keymap): >lua
+    require("cursed").send_command("/clear")
+<
+  With opts: >lua
+    require("cursed").send_command("/clear", { auto_submit = true })
+    require("cursed").send_command("/clear", { pane_target = "%3" })
+<
 
 ==============================================================================
 KEYMAPS                                                       *cursed-keymaps*

@@ -36,29 +36,33 @@ All options are optional. Defaults are shown below.
 
 ```lua
 require("cursed").setup({
-  -- Transport
+  -- ── Transport ──────────────────────────────────────────────────────────────
   backend = "tmux",            -- only "tmux" is currently supported
   tmux = {
-    pane_target = "{left}",    -- tmux target-pane: "{left}", "%3", "session:1.0", …
-    auto_submit = true,        -- paste then send Enter (~300ms later, async) so Claude starts processing
+    pane_target = "{left}",    -- tmux target-pane: "{left}", "{right}", "%3", "session:1.0", …
+    auto_submit = true,        -- true  → paste + Enter so Claude starts immediately
+                               -- false → paste only; go to pane, edit, press Enter yourself
   },
 
-  -- What to collect
+  -- ── What to collect ────────────────────────────────────────────────────────
   scope        = "buffer",     -- "buffer" | "all_buffers" | "workspace"
-  min_severity = vim.diagnostic.severity.HINT,  -- filter out below this level
+  min_severity = vim.diagnostic.severity.HINT,  -- HINT=4 INFO=3 WARN=2 ERROR=1
 
-  -- How to format
-  format = "default",          -- "default" | "compact" | "with_source_lines" | function(d, bufnr) -> string|nil
+  -- ── How to format ──────────────────────────────────────────────────────────
+  format = "default",          -- "default" | "compact" | "with_source_lines"
+                               -- or function(diag, bufnr) -> string|nil
 
-  -- Prompt wrapping (use {diagnostics} as placeholder)
+  -- ── Prompt templates ───────────────────────────────────────────────────────
+  -- Use {diagnostics} as the placeholder for the formatted block.
+  -- Pass the key as an arg to :CursedSendDiags, e.g. :CursedSendDiags explain
   templates = {
     fix     = "Please fix these diagnostics:\n\n{diagnostics}",
     explain = "Explain these diagnostics:\n\n{diagnostics}",
     test    = "Write tests that cover these diagnostics:\n\n{diagnostics}",
   },
-  default_template = nil,      -- template key to apply automatically, or nil
+  default_template = nil,      -- apply a template automatically on every send, or nil
 
-  -- Auto-send on DiagnosticChanged
+  -- ── Auto-send on DiagnosticChanged ─────────────────────────────────────────
   auto_send = {
     enabled      = false,
     event        = "DiagnosticChanged",
@@ -67,15 +71,54 @@ require("cursed").setup({
     scope        = "buffer",
   },
 
-  -- Keymaps (set any value to false to disable)
+  -- ── Keymaps ────────────────────────────────────────────────────────────────
+  -- Set any value to false to disable, or a string to remap.
   keymaps = {
-    send              = nil,       -- global: e.g. "<leader>cd" → send_diagnostics()
-    preview_send      = "<CR>",    -- confirm & send inside the preview window
-    preview_close     = "q",       -- close preview window
-    preview_close_esc = "<Esc>",   -- close preview window (Esc)
+    send              = nil,       -- global normal-mode: e.g. "<leader>cd" → send_diagnostics()
+    preview_send      = "<CR>",    -- inside :CursedPreview: confirm & send
+    preview_close     = "q",       -- inside :CursedPreview: close without sending
+    preview_close_esc = "<Esc>",   -- inside :CursedPreview: close without sending (Esc)
+  },
+
+  -- ── Pre-send command ───────────────────────────────────────────────────────
+  -- Sends a command to the pane *before* pasting diagnostics.
+  -- Typical use: "/clear" resets Claude's context so history doesn't accumulate.
+  -- command = nil disables the feature entirely.
+  -- Per-feature keys: nil = follow global, false = suppress for that feature only.
+  pre_send = {
+    command   = nil,       -- string|nil: e.g. "/clear"; nil = feature off
+    delay_ms  = 300,       -- ms to wait after the command before pasting diagnostics
+    send      = nil,       -- nil: follows global  (manual :CursedSendDiags / keymap)
+    auto_send = nil,       -- nil: follows global  (consider false to reduce noise)
+    preview   = nil,       -- nil: follows global  (:CursedPreview send action)
+    pick      = nil,       -- nil: follows global  (:CursedPick send action)
   },
 })
 ```
+
+### Sending arbitrary commands
+
+`send_command(text, opts?)` sends any raw string to the configured pane. Use it for keymaps that trigger Claude Code slash commands without leaving Neovim.
+
+```lua
+local cursed = require("cursed")
+
+-- Fixed command
+vim.keymap.set("n", "<leader>cC", function()
+  cursed.send_command("/clear")
+end, { desc = "Clear Claude Code context" })
+
+-- Interactive prompt
+vim.keymap.set("n", "<leader>c:", function()
+  vim.ui.input({ prompt = "Claude> " }, function(input)
+    if input and input ~= "" then cursed.send_command(input) end
+  end)
+end, { desc = "Send arbitrary command to Claude Code" })
+```
+
+Or from the command line: `:CursedSendCommand /clear`
+
+`opts` accepts `pane_target` and `auto_submit` to override config defaults for that call.
 
 ### tmux pane target syntax
 
@@ -96,6 +139,7 @@ require("cursed").setup({
 | `:CursedSendDiags [arg]` | Send diagnostics. Optional arg: scope (`buffer`, `all_buffers`, `workspace`) or template name (`fix`, `explain`, …) |
 | `:CursedPreview` | Preview and edit the formatted text before sending (keymaps configurable via `keymaps.*`) |
 | `:CursedPick` | Telescope picker to select individual diagnostics from all loaded buffers (ignores `scope`; requires [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)) |
+| `:CursedSendCommand {text}` | Send any raw string to the pane (e.g. `:CursedSendCommand /clear`) |
 
 ## Usage
 

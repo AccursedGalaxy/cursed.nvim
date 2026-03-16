@@ -33,6 +33,18 @@ vim.api.nvim_create_user_command("CursedPreview", function()
 	require("cursed").preview()
 end, { desc = "Preview diagnostics before sending to Claude Code" })
 
+vim.api.nvim_create_user_command("CursedSendCommand", function(cmd_opts)
+	local text = vim.trim(cmd_opts.args or "")
+	if text == "" then
+		vim.notify("cursed: CursedSendCommand requires a argument, e.g. :CursedSendCommand /clear", vim.log.levels.WARN)
+		return
+	end
+	require("cursed").send_command(text)
+end, {
+	desc = "Send an arbitrary command to the Claude Code tmux pane",
+	nargs = "+",
+})
+
 if pcall(require, "telescope") then
 	vim.api.nvim_create_user_command("CursedPick", function()
 		require("cursed.pickers.telescope").pick()

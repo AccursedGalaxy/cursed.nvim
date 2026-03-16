@@ -128,4 +128,53 @@ describe("cursed.validate", function()
 		assert.are.equal(1, #errors)
 		assert.truthy(errors[1]:find("min_severity"))
 	end)
+
+	-- pre_send
+	it("accepts a valid pre_send config", function()
+		local errors = validate.validate({
+			pre_send = {
+				command  = "/clear",
+				delay_ms = 500,
+				send      = nil,
+				auto_send = false,
+				preview   = nil,
+				pick      = false,
+			},
+		})
+		assert.are.equal(0, #errors)
+	end)
+
+	it("accepts pre_send with only command set", function()
+		local errors = validate.validate({ pre_send = { command = "/clear" } })
+		assert.are.equal(0, #errors)
+	end)
+
+	it("accepts pre_send with command = nil (feature off)", function()
+		local errors = validate.validate({ pre_send = { command = nil } })
+		assert.are.equal(0, #errors)
+	end)
+
+	it("errors when pre_send.command is not a string", function()
+		local errors = validate.validate({ pre_send = { command = true } })
+		assert.are.equal(1, #errors)
+		assert.truthy(errors[1]:find("pre_send.command"))
+	end)
+
+	it("errors when pre_send.delay_ms is not a number", function()
+		local errors = validate.validate({ pre_send = { delay_ms = "300" } })
+		assert.are.equal(1, #errors)
+		assert.truthy(errors[1]:find("pre_send.delay_ms"))
+	end)
+
+	it("errors when a pre_send feature key is not false or nil", function()
+		local errors = validate.validate({ pre_send = { auto_send = true } })
+		assert.are.equal(1, #errors)
+		assert.truthy(errors[1]:find("pre_send.auto_send"))
+	end)
+
+	it("errors when pre_send is not a table", function()
+		local errors = validate.validate({ pre_send = "nope" })
+		assert.are.equal(1, #errors)
+		assert.truthy(errors[1]:find("pre_send"))
+	end)
 end)

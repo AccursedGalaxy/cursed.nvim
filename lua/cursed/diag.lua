@@ -187,7 +187,7 @@ local function fire(event, data)
 end
 
 --- Send diagnostics to the configured backend.
---- @param opts table Optional overrides: scope, min_severity, format, template, pane_target, auto_submit, backend
+--- @param opts table Optional overrides: scope, min_severity, format, template, pane_target, auto_submit, backend, from_auto_send
 function M.send(opts)
 	opts = opts or {}
 	local cursed = require("cursed")
@@ -218,8 +218,15 @@ function M.send(opts)
 	fire("CursedPreSend", { text = text, backend = backend_name })
 	require("cursed.statusline")._update("sending")
 
+	local feature = opts.from_auto_send and "auto_send" or "send"
+	local pre_cmd, pre_delay = require("cursed.util").resolve_pre_command(feature)
 	local transport = require("cursed.transport").get(backend_name)
-	local ok = transport.send(text, { pane_target = pane_target, auto_submit = auto_submit })
+	local ok = transport.send(text, {
+		pane_target = pane_target,
+		auto_submit = auto_submit,
+		pre_command = pre_cmd,
+		pre_command_delay_ms = pre_delay,
+	})
 
 	if ok then
 		fire("CursedPostSend", { text = text, backend = backend_name })
