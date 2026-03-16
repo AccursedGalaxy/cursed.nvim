@@ -102,8 +102,13 @@ without validation).
       scope          = "buffer",
     },
 
-    -- Keymap
-    keymap           = nil,          -- string | nil: e.g. "<leader>cd"
+    -- Keymaps (set any value to false to disable)
+    keymaps = {
+      send              = nil,       -- string | nil: global, e.g. "<leader>cd"
+      preview_send      = "<CR>",    -- confirm & send inside preview window
+      preview_close     = "q",       -- close preview without sending
+      preview_close_esc = "<Esc>",   -- close preview without sending (Esc)
+    },
   })
 <
 
@@ -160,9 +165,22 @@ Options ~
 `auto_send.min_severity` (number, default: `vim.diagnostic.severity.ERROR`)
   Auto-send only triggers for diagnostics at or above this severity.
 
-`keymap` (string|nil, default: `nil`)
-  Normal-mode keymap bound directly to `send_diagnostics()`. Equivalent to a
-  no-argument |:CursedSendDiags|. Example: `"<leader>cd"`.
+`keymaps` (table)
+  All user-facing keymaps. Set any value to `false` to disable it, or a
+  string to remap it. Unset keys use the defaults shown in the config block.
+
+  `keymaps.send` (string|nil, default: `nil`)
+    Global normal-mode keymap bound to `send_diagnostics()`. Equivalent to
+    a no-argument |:CursedSendDiags|. Example: `"<leader>cd"`.
+
+  `keymaps.preview_send` (string|false, default: `"<CR>"`)
+    Inside |:CursedPreview|: send the (possibly edited) content and close.
+
+  `keymaps.preview_close` (string|false, default: `"q"`)
+    Inside |:CursedPreview|: close without sending.
+
+  `keymaps.preview_close_esc` (string|false, default: `"<Esc>"`)
+    Inside |:CursedPreview|: close without sending (Esc variant).
 
 ==============================================================================
 COMMANDS                                                      *cursed-commands*
@@ -201,9 +219,14 @@ KEYMAPS                                                       *cursed-keymaps*
 
 Inside the |:CursedPreview| floating window: ~
 
-  <CR>    Send the (possibly edited) content to Claude Code and close.
-  q       Close without sending.
-  <Esc>   Close without sending.
+  Default keymaps (all overridable via `config.keymaps`):
+
+  `keymaps.preview_send`      (default <CR>)   Send content and close.
+  `keymaps.preview_close`     (default q)      Close without sending.
+  `keymaps.preview_close_esc` (default <Esc>)  Close without sending.
+
+  Set any of these to `false` to disable, or a string to remap. The preview
+  window title reflects the currently configured send and close keys.
 
 ==============================================================================
 EVENTS                                                         *cursed-events*
