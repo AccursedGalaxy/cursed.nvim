@@ -7,11 +7,8 @@ local M = {}
 --- @return boolean ok true on success
 function M.send(text, opts)
 	opts = opts or {}
-	local pane_target = opts.pane_target or "{left}"
+	local pane_target = opts.pane_target
 	local auto_submit = opts.auto_submit
-	if auto_submit == nil then
-		auto_submit = true
-	end
 	local pre_command = opts.pre_command
 	local pre_delay = opts.pre_command_delay_ms or 300
 
@@ -49,12 +46,20 @@ function M.send(text, opts)
 	else
 		if pre_command then
 			vim.fn.system({ "tmux", "send-keys", "-t", pane_target, pre_command, "Enter" })
-			vim.fn.system({ "sleep", string.format("%.3f", pre_delay / 1000) })
-		end
-		vim.fn.system({ "tmux", "paste-buffer", "-b", "cursed_diag", "-t", pane_target })
-		if vim.v.shell_error ~= 0 then
-			vim.notify("cursed: failed to paste to tmux pane '" .. pane_target .. "'", vim.log.levels.ERROR)
-			return false
+			-- Defer the paste so we don't block Neovim's main thread while
+			-- waiting for the pre-command to be processed.
+			vim.defer_fn(function()
+				vim.fn.system({ "tmux", "paste-buffer", "-b", "cursed_diag", "-t", pane_target })
+				if vim.v.shell_error ~= 0 then
+					vim.notify("cursed: failed to paste to tmux pane '" .. pane_target .. "'", vim.log.levels.ERROR)
+				end
+			end, pre_delay)
+		else
+			vim.fn.system({ "tmux", "paste-buffer", "-b", "cursed_diag", "-t", pane_target })
+			if vim.v.shell_error ~= 0 then
+				vim.notify("cursed: failed to paste to tmux pane '" .. pane_target .. "'", vim.log.levels.ERROR)
+				return false
+			end
 		end
 	end
 

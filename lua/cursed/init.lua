@@ -68,102 +68,15 @@ end
 --- @param opts table|nil Optional overrides: pane_target (string), auto_submit (boolean)
 function M.send_command(text, opts)
 	opts = opts or {}
-	local cfg = M.config or {}
-	local tmux_cfg = cfg.tmux or {}
-	local transport = require("cursed.transport").get(cfg.backend or "tmux")
-	local auto_submit = opts.auto_submit
-	if auto_submit == nil then
-		auto_submit = tmux_cfg.auto_submit
-	end
-	transport.send(text, {
-		pane_target = opts.pane_target or tmux_cfg.pane_target or "{left}",
-		auto_submit = auto_submit,
+	require("cursed.util").send_to_transport(text, {
+		feature = "send",
+		pane_target = opts.pane_target,
+		auto_submit = opts.auto_submit,
 	})
 end
 
---- Open a floating preview of the formatted diagnostics.
---- Keymaps are controlled via config.keymaps (preview_send, preview_close, preview_close_esc).
 function M.preview()
-	local text = require("cursed.diag").format_diagnostics(0)
-	if not text then
-		vim.notify("No diagnostics for current buffer", vim.log.levels.INFO)
-		return
-	end
-
-	local buf = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(text, "\n"))
-	vim.bo[buf].filetype = "text"
-	vim.bo[buf].modifiable = true
-
-	local width = math.min(100, vim.o.columns - 4)
-	local height = math.min(30, vim.o.lines - 4)
-	local km = M.config.keymaps
-	local win = vim.api.nvim_open_win(buf, true, {
-		relative = "editor",
-		width = width,
-		height = height,
-		col = math.floor((vim.o.columns - width) / 2),
-		row = math.floor((vim.o.lines - height) / 2),
-		style = "minimal",
-		border = "rounded",
-		title = string.format(
-			" cursed.nvim — preview (%s send · %s cancel) ",
-			km.preview_send or "?",
-			km.preview_close or "?"
-		),
-		title_pos = "center",
-	})
-
-	local function close()
-		if vim.api.nvim_win_is_valid(win) then
-			vim.api.nvim_win_close(win, true)
-		end
-	end
-
-	local function set_buf_km(lhs, rhs, desc)
-		if lhs then
-			vim.keymap.set("n", lhs, rhs, { buffer = buf, desc = desc })
-		end
-	end
-
-	set_buf_km(km.preview_send, function()
-		local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-		local final_text = table.concat(lines, "\n")
-		close()
-		local cfg = M.config or {}
-		local tmux_cfg = cfg.tmux or {}
-		local backend_name = cfg.backend or "tmux"
-		local statusline = require("cursed.statusline")
-		vim.api.nvim_exec_autocmds(
-			"User",
-			{ pattern = "CursedPreSend", data = { text = final_text, backend = backend_name } }
-		)
-		statusline._update("sending")
-		local pre_cmd, pre_delay = require("cursed.util").resolve_pre_command("preview")
-		local transport = require("cursed.transport").get(backend_name)
-		local ok = transport.send(final_text, {
-			pane_target = tmux_cfg.pane_target or "{left}",
-			auto_submit = tmux_cfg.auto_submit,
-			pre_command = pre_cmd,
-			pre_command_delay_ms = pre_delay,
-		})
-		if ok then
-			vim.api.nvim_exec_autocmds(
-				"User",
-				{ pattern = "CursedPostSend", data = { text = final_text, backend = backend_name } }
-			)
-			statusline._update("sent")
-		else
-			vim.api.nvim_exec_autocmds(
-				"User",
-				{ pattern = "CursedSendFailed", data = { text = final_text, backend = backend_name } }
-			)
-			statusline._update("failed")
-		end
-	end, "Send diagnostics to Claude Code")
-
-	set_buf_km(km.preview_close, close, "Cancel preview")
-	set_buf_km(km.preview_close_esc, close, "Cancel preview")
+	require("cursed.preview").open()
 end
 
 function M.hello()
