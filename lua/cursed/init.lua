@@ -19,7 +19,7 @@ function M.setup(opts)
 	M.config = merged
 
 	local km = M.config.keymaps
-	if km.send and km.send ~= false then
+	if km.send then
 		vim.keymap.set("n", km.send, M.send_diagnostics, {
 			desc = "Send diagnostics to Claude Code tmux pane",
 		})
@@ -62,7 +62,7 @@ function M.send_diagnostics(opts)
 end
 
 --- Open a floating preview of the formatted diagnostics.
---- Press <CR> to send, q/<Esc> to cancel.
+--- Keymaps are controlled via config.keymaps (preview_send, preview_close, preview_close_esc).
 function M.preview()
 	local text = require("cursed.diag").format_diagnostics(0)
 	if not text then
@@ -101,7 +101,7 @@ function M.preview()
 	end
 
 	local function set_buf_km(lhs, rhs, desc)
-		if lhs and lhs ~= false then
+		if lhs then
 			vim.keymap.set("n", lhs, rhs, { buffer = buf, desc = desc })
 		end
 	end
