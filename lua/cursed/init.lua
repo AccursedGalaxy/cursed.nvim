@@ -38,7 +38,8 @@ function M.setup(opts)
 		})
 	end
 	if km.send_selection then
-		vim.keymap.set("x", km.send_selection, M.send_selection, {
+		vim.keymap.set("x", km.send_selection, ":CursedSendSelection<CR>", {
+			silent = true,
 			desc = "Send visual selection to Claude Code tmux pane",
 		})
 	end

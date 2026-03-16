@@ -1,22 +1,32 @@
 local M = {}
 
 --- Get the current visual selection: raw lines + metadata.
---- Uses '< and '> marks, so call this after visual mode exits.
+--- Prefers an explicit line range (from a command's range) over marks, because
+--- <Cmd> mappings do not exit visual mode and therefore do not commit '< / '>.
+--- @param line1 number|nil First line of selection (1-based, from cmd range)
+--- @param line2 number|nil Last line of selection (1-based, from cmd range)
 --- @return table|nil { lines: string[], path: string, start_line: number, end_line: number }
-function M.get()
+function M.get(line1, line2)
 	local bufnr = vim.api.nvim_get_current_buf()
-	local start_pos = vim.fn.getpos("'<")
-	local end_pos = vim.fn.getpos("'>")
 
-	local start_line = start_pos[2]
-	local end_line = end_pos[2]
+	local start_line, end_line
 
-	if start_line == 0 and end_line == 0 then
-		return nil
+	if line1 and line2 then
+		start_line = math.min(line1, line2)
+		end_line = math.max(line1, line2)
+	else
+		-- Fallback: read committed marks (only reliable when visual mode has fully exited)
+		local start_pos = vim.fn.getpos("'<")
+		local end_pos = vim.fn.getpos("'>")
+		if start_pos[2] == 0 and end_pos[2] == 0 then
+			return nil
+		end
+		start_line = math.min(start_pos[2], end_pos[2])
+		end_line = math.max(start_pos[2], end_pos[2])
 	end
 
-	-- nvim_buf_get_lines is 0-indexed, end is exclusive
 	local lines = vim.api.nvim_buf_get_lines(bufnr, start_line - 1, end_line, false)
+
 	if not lines or #lines == 0 then
 		return nil
 	end
@@ -59,7 +69,7 @@ end
 function M.send(opts)
 	opts = opts or {}
 
-	local sel = M.get()
+	local sel = M.get(opts.line1, opts.line2)
 	if not sel then
 		vim.notify("cursed: no visual selection found", vim.log.levels.INFO)
 		return

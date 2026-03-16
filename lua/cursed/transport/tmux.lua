@@ -19,7 +19,9 @@ function M.send(text, opts)
 		vim.notify("cursed: failed to create temp file", vim.log.levels.ERROR)
 		return false
 	end
-	file:write(text)
+	-- Wrap in bracketed paste sequences so embedded newlines are not interpreted
+	-- as Enter keypresses by the receiving application (e.g. Claude Code / xterm.js).
+	file:write("\027[200~" .. text .. "\027[201~")
 	file:close()
 
 	vim.fn.system({ "tmux", "load-buffer", "-b", "cursed_diag", tmp })
