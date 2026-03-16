@@ -182,27 +182,11 @@ local function apply_template(text, template_name)
 	return (tpl:gsub("{diagnostics}", function() return text end))
 end
 
-local function fire(event, data)
-	vim.api.nvim_exec_autocmds("User", { pattern = event, data = data })
-end
-
 --- Send diagnostics to the configured backend.
 --- @param opts table Optional overrides: scope, min_severity, format, template, pane_target, auto_submit, backend, from_auto_send
 function M.send(opts)
 	opts = opts or {}
-	local cursed = require("cursed")
-	local cfg = cursed.config or {}
-	local tmux_cfg = cfg.tmux or {}
-
-	local backend_name = opts.backend or cfg.backend or "tmux"
-	local pane_target = opts.pane_target or tmux_cfg.pane_target or "{left}"
-	local auto_submit = opts.auto_submit
-	if auto_submit == nil then
-		auto_submit = tmux_cfg.auto_submit
-	end
-	if auto_submit == nil then
-		auto_submit = true
-	end
+	local cfg = require("cursed").config or {}
 
 	local text = M.format_diagnostics(0, opts)
 	if not text then
@@ -215,26 +199,12 @@ function M.send(opts)
 		text = apply_template(text, template_name)
 	end
 
-	fire("CursedPreSend", { text = text, backend = backend_name })
-	require("cursed.statusline")._update("sending")
-
-	local feature = opts.from_auto_send and "auto_send" or "send"
-	local pre_cmd, pre_delay = require("cursed.util").resolve_pre_command(feature)
-	local transport = require("cursed.transport").get(backend_name)
-	local ok = transport.send(text, {
-		pane_target = pane_target,
-		auto_submit = auto_submit,
-		pre_command = pre_cmd,
-		pre_command_delay_ms = pre_delay,
+	require("cursed.util").send_to_transport(text, {
+		feature = opts.from_auto_send and "auto_send" or "send",
+		backend = opts.backend,
+		pane_target = opts.pane_target,
+		auto_submit = opts.auto_submit,
 	})
-
-	if ok then
-		fire("CursedPostSend", { text = text, backend = backend_name })
-		require("cursed.statusline")._update("sent")
-	else
-		fire("CursedSendFailed", { text = text, backend = backend_name })
-		require("cursed.statusline")._update("failed")
-	end
 end
 
 return M

@@ -45,8 +45,6 @@ end, {
 	nargs = "+",
 })
 
-if pcall(require, "telescope") then
-	vim.api.nvim_create_user_command("CursedPick", function()
-		require("cursed.pickers.telescope").pick()
-	end, { desc = "Pick diagnostics to send using Telescope" })
-end
+vim.api.nvim_create_user_command("CursedPick", function()
+	require("cursed.pickers.telescope").pick()
+end, { desc = "Pick diagnostics to send using Telescope" })
