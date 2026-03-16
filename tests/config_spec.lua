@@ -64,6 +64,18 @@ describe("cursed.validate", function()
 		assert.truthy(errors[1]:find("pane_target"))
 	end)
 
+	it("accepts valid tmux.paste_delay_ms", function()
+		local errors = validate.validate({ tmux = { paste_delay_ms = 500 } })
+		assert.are.equal(0, #errors)
+	end)
+
+	it("errors when tmux.paste_delay_ms is not a number", function()
+		local errors = validate.validate({ tmux = { paste_delay_ms = "500" } })
+		assert.are.equal(1, #errors)
+		assert.truthy(errors[1]:find("paste_delay_ms"))
+		assert.truthy(errors[1]:find("number"))
+	end)
+
 	it("errors when backend is an invalid value", function()
 		local errors = validate.validate({ backend = "wezterm" })
 		assert.are.equal(1, #errors)

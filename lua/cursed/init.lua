@@ -5,6 +5,16 @@ local validate = require("cursed.validate")
 
 local auto_send_timer = nil
 
+local function teardown_auto_send()
+	if auto_send_timer then
+		auto_send_timer:stop()
+		auto_send_timer:close()
+		auto_send_timer = nil
+	end
+	-- Clear the augroup so any previously-registered autocmd stops firing.
+	vim.api.nvim_create_augroup("CursedAutoSend", { clear = true })
+end
+
 function M.setup(opts)
 	local merged = vim.tbl_deep_extend("force", config.defaults, opts or {})
 
@@ -17,6 +27,9 @@ function M.setup(opts)
 	end
 
 	M.config = merged
+	config._set(merged)
+
+	teardown_auto_send()
 
 	local km = M.config.keymaps
 	if km.send then

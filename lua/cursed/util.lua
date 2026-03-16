@@ -5,7 +5,7 @@ local M = {}
 --- @param feature string one of "send", "auto_send", "preview", "pick"
 --- @return string|nil, number|nil
 function M.resolve_pre_command(feature)
-	local ps = ((require("cursed").config) or {}).pre_send or {}
+	local ps = require("cursed.config").get().pre_send or {}
 	if not ps.command then
 		return nil, nil
 	end
@@ -27,7 +27,7 @@ end
 --- @return boolean ok
 function M.send_to_transport(text, opts)
 	opts = opts or {}
-	local cfg = require("cursed").config or {}
+	local cfg = require("cursed.config").get()
 	local tmux_cfg = cfg.tmux or {}
 
 	local backend_name = opts.backend or cfg.backend
@@ -36,6 +36,7 @@ function M.send_to_transport(text, opts)
 	if auto_submit == nil then
 		auto_submit = tmux_cfg.auto_submit
 	end
+	local paste_delay_ms = tmux_cfg.paste_delay_ms or 300
 
 	local statusline = require("cursed.statusline")
 	fire("CursedPreSend", { text = text, backend = backend_name })
@@ -48,6 +49,7 @@ function M.send_to_transport(text, opts)
 		auto_submit = auto_submit,
 		pre_command = pre_cmd,
 		pre_command_delay_ms = pre_delay,
+		paste_delay_ms = paste_delay_ms,
 	})
 
 	if ok then

@@ -3,7 +3,8 @@ local M = {}
 --- Send text to a tmux pane.
 --- @param text string The text to paste
 --- @param opts table Options: pane_target (string), auto_submit (boolean),
----                            pre_command (string|nil), pre_command_delay_ms (number|nil)
+---                            pre_command (string|nil), pre_command_delay_ms (number|nil),
+---                            paste_delay_ms (number|nil)
 --- @return boolean ok true on success
 function M.send(text, opts)
 	opts = opts or {}
@@ -29,20 +30,42 @@ function M.send(text, opts)
 	end
 
 	if auto_submit then
-		-- Run (optional pre-command →) paste → sleep → Enter as a single async
-		-- shell job so Neovim is never blocked. The shell sleep gives Claude Code
-		-- enough time to finish processing the bracketed paste before Enter
-		-- arrives; 300ms is generous and imperceptible.
-		local t = vim.fn.shellescape(pane_target)
-		local pre = ""
-		if pre_command then
-			local delay_s = string.format("%.3f", pre_delay / 1000)
-			pre = "tmux send-keys -t " .. t .. " " .. vim.fn.shellescape(pre_command) .. " Enter && sleep " .. delay_s .. " && "
+		-- Chain steps as async jobs so Neovim is never blocked:
+		-- (optional pre-command → pre_delay) → paste → paste_delay_ms → Enter
+		-- Each tmux call is a proper argv list — no shell interpolation.
+		local paste_delay_ms = opts.paste_delay_ms or 300
+
+		local function do_enter()
+			vim.defer_fn(function()
+				vim.fn.jobstart({ "tmux", "send-keys", "-t", pane_target, "Enter" })
+			end, paste_delay_ms)
 		end
-		vim.fn.jobstart({
-			"sh", "-c",
-			pre .. "tmux paste-buffer -b cursed_diag -t " .. t .. " && sleep 0.3 && tmux send-keys -t " .. t .. " Enter",
-		})
+
+		local function do_paste()
+			vim.fn.jobstart(
+				{ "tmux", "paste-buffer", "-b", "cursed_diag", "-t", pane_target },
+				{ on_exit = function(_, code)
+					if code == 0 then
+						do_enter()
+					else
+						vim.schedule(function()
+							vim.notify("cursed: failed to paste to tmux pane '" .. pane_target .. "'", vim.log.levels.ERROR)
+						end)
+					end
+				end }
+			)
+		end
+
+		if pre_command then
+			vim.fn.jobstart(
+				{ "tmux", "send-keys", "-t", pane_target, pre_command, "Enter" },
+				{ on_exit = function()
+					vim.defer_fn(do_paste, pre_delay)
+				end }
+			)
+		else
+			do_paste()
+		end
 	else
 		if pre_command then
 			vim.fn.system({ "tmux", "send-keys", "-t", pane_target, pre_command, "Enter" })

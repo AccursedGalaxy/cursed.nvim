@@ -29,6 +29,9 @@ function M.validate(config)
 			if config.tmux.auto_submit ~= nil and type(config.tmux.auto_submit) ~= "boolean" then
 				table.insert(errors, type_err("tmux.auto_submit", "boolean", type(config.tmux.auto_submit)))
 			end
+			if config.tmux.paste_delay_ms ~= nil and type(config.tmux.paste_delay_ms) ~= "number" then
+				table.insert(errors, type_err("tmux.paste_delay_ms", "number", type(config.tmux.paste_delay_ms)))
+			end
 		end
 	end
 

@@ -87,7 +87,20 @@ end
 local function fmt_custom(diags, bufnr, fn)
 	local lines = {}
 	for _, d in ipairs(diags) do
-		local result = fn(d, bufnr)
+		local ok, result = pcall(fn, d, bufnr)
+		if not ok then
+			error("cursed: config.format function raised an error: " .. tostring(result), 0)
+		end
+		local t = type(result)
+		if t ~= "string" and t ~= "nil" then
+			error(
+				string.format(
+					"cursed: config.format function must return string or nil, got %s",
+					t
+				),
+				0
+			)
+		end
 		if result then
 			lines[#lines + 1] = result
 		end
@@ -142,7 +155,7 @@ end
 --- @return string|nil Formatted text, or nil if no diagnostics match
 function M.format_diagnostics(bufnr, opts)
 	opts = opts or {}
-	local cfg = (require("cursed").config) or {}
+	local cfg = require("cursed.config").get()
 	bufnr = bufnr or 0
 
 	local scope = opts.scope or cfg.scope or "buffer"
@@ -171,7 +184,7 @@ function M.format_diagnostics(bufnr, opts)
 end
 
 local function apply_template(text, template_name)
-	local cfg = (require("cursed").config) or {}
+	local cfg = require("cursed.config").get()
 	local templates = cfg.templates or {}
 	local tpl = templates[template_name]
 	if not tpl then
@@ -186,9 +199,13 @@ end
 --- @param opts table Optional overrides: scope, min_severity, format, template, pane_target, auto_submit, backend, from_auto_send
 function M.send(opts)
 	opts = opts or {}
-	local cfg = require("cursed").config or {}
+	local cfg = require("cursed.config").get()
 
-	local text = M.format_diagnostics(0, opts)
+	local ok, text = pcall(M.format_diagnostics, 0, opts)
+	if not ok then
+		vim.notify(tostring(text), vim.log.levels.ERROR)
+		return
+	end
 	if not text then
 		vim.notify("No diagnostics for current buffer", vim.log.levels.INFO)
 		return

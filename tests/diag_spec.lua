@@ -1,11 +1,9 @@
 ---@diagnostic disable: duplicate-set-field, undefined-field, need-check-nil
 local diag = require("cursed.diag")
+local config = require("cursed.config")
 
--- Minimal stub so format_diagnostics doesn't crash on require("cursed").config
-local cursed = require("cursed")
-if not cursed.config then
-	cursed.config = {}
-end
+-- Bootstrap a minimal config so config.get() doesn't error in tests.
+config._set(vim.tbl_deep_extend("force", config.defaults, {}))
 
 describe("cursed.diag.format_diagnostics()", function()
 	local orig_get, orig_name, orig_get_lines
@@ -150,5 +148,47 @@ describe("cursed.diag.format_diagnostics()", function()
 		})
 		assert.is_not_nil(result)
 		assert.are.equal("custom:custom", result)
+	end)
+
+	it("raises a clear cursed error when format function returns a non-string", function()
+		vim.api.nvim_buf_get_name = function()
+			return "/test/file.lua"
+		end
+		vim.diagnostic.get = function()
+			return {
+				{ lnum = 0, col = 0, severity = vim.diagnostic.severity.ERROR, message = "oops", bufnr = 0 },
+			}
+		end
+		local ok, err = pcall(diag.format_diagnostics, 0, {
+			scope = "buffer",
+			format = function(_, _)
+				return { "not", "a", "string" }
+			end,
+		})
+		assert.is_false(ok)
+		assert.truthy(err:find("cursed:"), "error should start with cursed:")
+		assert.truthy(err:find("format function"), "error should mention format function")
+		assert.truthy(err:find("table"), "error should mention the bad return type")
+	end)
+
+	it("raises a clear cursed error when format function itself errors", function()
+		vim.api.nvim_buf_get_name = function()
+			return "/test/file.lua"
+		end
+		vim.diagnostic.get = function()
+			return {
+				{ lnum = 0, col = 0, severity = vim.diagnostic.severity.ERROR, message = "oops", bufnr = 0 },
+			}
+		end
+		local ok, err = pcall(diag.format_diagnostics, 0, {
+			scope = "buffer",
+			format = function(_, _)
+				error("boom from user fn")
+			end,
+		})
+		assert.is_false(ok)
+		assert.truthy(err:find("cursed:"), "error should start with cursed:")
+		assert.truthy(err:find("format function"), "error should mention format function")
+		assert.truthy(err:find("boom from user fn"), "error should include original message")
 	end)
 end)

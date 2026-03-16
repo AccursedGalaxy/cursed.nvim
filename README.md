@@ -42,6 +42,7 @@ require("cursed").setup({
     pane_target = "{left}",    -- tmux target-pane: "{left}", "{right}", "%3", "session:1.0", …
     auto_submit = true,        -- true  → paste + Enter so Claude starts immediately
                                -- false → paste only; go to pane, edit, press Enter yourself
+    paste_delay_ms = 300,      -- ms between paste and Enter; increase on slow machines or large diagnostics
   },
 
   -- ── What to collect ────────────────────────────────────────────────────────
@@ -96,6 +97,23 @@ require("cursed").setup({
 })
 ```
 
+### Config precedence
+
+**`scope` and `min_severity`** have two independent resolution paths:
+
+| Send path | `scope` used | `min_severity` used |
+|-----------|-------------|---------------------|
+| Manual (`:CursedSendDiags`, keymap, `send_command`) | top-level `scope` | top-level `min_severity` |
+| Auto-send (`DiagnosticChanged` autocmd) | `auto_send.scope` | `auto_send.min_severity` |
+
+`auto_send` values are passed as explicit opts and **never fall back to the top-level globals**. If you set `min_severity = ERROR` at the top level expecting auto-send to follow, it will not — set `auto_send.min_severity` explicitly.
+
+**`pre_send`** resolves in three steps for each feature (`send`, `auto_send`, `preview`, `pick`):
+
+1. `pre_send.command = nil` → entire feature off; per-feature keys are ignored.
+2. `pre_send.<feature> = false` → disabled for that feature only.
+3. `pre_send.<feature> = nil` → inherits `pre_send.command` + `pre_send.delay_ms`.
+
 ### Sending arbitrary commands
 
 `send_command(text, opts?)` sends any raw string to the configured pane. Use it for keymaps that trigger Claude Code slash commands without leaving Neovim.
@@ -145,7 +163,7 @@ Or from the command line: `:CursedSendCommand /clear`
 
 1. Open a file that has LSP diagnostics.
 2. Run `:CursedSendDiags` (or your keymap).
-3. Claude Code in the pane to your left receives the formatted diagnostics and — if `auto_submit = true` — Enter is sent automatically (~300 ms later) so Claude starts processing.
+3. Claude Code in the pane to your left receives the formatted diagnostics and — if `auto_submit = true` — Enter is sent automatically (after `tmux.paste_delay_ms`) so Claude starts processing.
 
 **Send only errors:**
 ```vim

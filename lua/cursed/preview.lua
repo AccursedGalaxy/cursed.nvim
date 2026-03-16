@@ -4,7 +4,11 @@ local M = {}
 --- The user can edit the text before sending. Keymaps are controlled via
 --- config.keymaps (preview_send, preview_close, preview_close_esc).
 function M.open()
-	local text = require("cursed.diag").format_diagnostics(0)
+	local ok, text = pcall(require("cursed.diag").format_diagnostics, 0)
+	if not ok then
+		vim.notify(tostring(text), vim.log.levels.ERROR)
+		return
+	end
 	if not text then
 		vim.notify("No diagnostics for current buffer", vim.log.levels.INFO)
 		return
@@ -17,7 +21,7 @@ function M.open()
 
 	local width = math.min(100, vim.o.columns - 4)
 	local height = math.min(30, vim.o.lines - 4)
-	local km = (require("cursed").config or {}).keymaps or {}
+	local km = require("cursed.config").get().keymaps or {}
 	local win = vim.api.nvim_open_win(buf, true, {
 		relative = "editor",
 		width = width,
