@@ -67,7 +67,13 @@ require("cursed").setup({
     scope        = "buffer",
   },
 
-  keymap = nil,                -- e.g. "<leader>cd"  bound directly to send_diagnostics()
+  -- Keymaps (set any value to false to disable)
+  keymaps = {
+    send              = nil,       -- global: e.g. "<leader>cd" → send_diagnostics()
+    preview_send      = "<CR>",    -- confirm & send inside the preview window
+    preview_close     = "q",       -- close preview window
+    preview_close_esc = "<Esc>",   -- close preview window (Esc)
+  },
 })
 ```
 
@@ -88,7 +94,7 @@ require("cursed").setup({
 |---------|-------------|
 | `:Cursed` | Verify the plugin is loaded |
 | `:CursedSendDiags [arg]` | Send diagnostics. Optional arg: scope (`buffer`, `all_buffers`, `workspace`) or template name (`fix`, `explain`, …) |
-| `:CursedPreview` | Preview and edit the formatted text before sending (`<CR>` to send, `q` to cancel) |
+| `:CursedPreview` | Preview and edit the formatted text before sending (keymaps configurable via `keymaps.*`) |
 | `:CursedPick` | Telescope picker to select individual diagnostics from all loaded buffers (ignores `scope`; requires [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)) |
 
 ## Usage
@@ -110,7 +116,7 @@ require("cursed").setup({
 
 **Preview before sending:**
 ```vim
-:CursedPreview      " floating window — edit, then <CR> to send
+:CursedPreview      " floating window — edit, then send with keymaps.preview_send (default <CR>)
 ```
 
 ## Statusline / lualine
