@@ -54,7 +54,9 @@ require("cursed").setup({
                                -- or function(diag, bufnr) -> string|nil
 
   -- ── Prompt templates ───────────────────────────────────────────────────────
-  -- Use {diagnostics} as the placeholder for the formatted content.
+  -- Use {content} as the placeholder — it is replaced by the formatted
+  -- diagnostics or selected code depending on how the template is invoked.
+  -- {diagnostics} still works as a legacy alias.
   -- Pass the key as an arg to :CursedSendDiags or :CursedSendSelection,
   -- e.g. :CursedSendDiags explain  or  :CursedSendSelection fix_selection
   templates = {
@@ -62,10 +64,10 @@ require("cursed").setup({
     fix     = "Please fix these diagnostics:\n\n{diagnostics}",
     explain = "Explain these diagnostics:\n\n{diagnostics}",
     test    = "Write tests that cover these diagnostics:\n\n{diagnostics}",
-    -- selection templates ({diagnostics} is replaced by the selected code)
-    fix_selection     = "Please fix the following code:\n\n{diagnostics}",
-    explain_selection = "Explain the following code:\n\n{diagnostics}",
-    review            = "Review the following code and suggest improvements:\n\n{diagnostics}",
+    -- selection templates
+    fix_selection     = "Please fix the following code:\n\n{content}",
+    explain_selection = "Explain the following code:\n\n{content}",
+    review            = "Review the following code and suggest improvements:\n\n{content}",
   },
   default_template = nil,      -- apply a template automatically on every send, or nil
 

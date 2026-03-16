@@ -47,9 +47,9 @@ M.defaults = {
 		fix = "Please fix these diagnostics:\n\n{diagnostics}",
 		explain = "Explain these diagnostics:\n\n{diagnostics}",
 		test = "Write tests that cover these diagnostics:\n\n{diagnostics}",
-		fix_selection = "Please fix the following code:\n\n{diagnostics}",
-		explain_selection = "Explain the following code:\n\n{diagnostics}",
-		review = "Review the following code and suggest improvements:\n\n{diagnostics}",
+		fix_selection = "Please fix the following code:\n\n{content}",
+		explain_selection = "Explain the following code:\n\n{content}",
+		review = "Review the following code and suggest improvements:\n\n{content}",
 	},
 	default_template = nil,
 	auto_send = {

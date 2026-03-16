@@ -190,9 +190,11 @@ function M.apply_template(text, template_name)
 	if not tpl then
 		return text
 	end
-	-- Use a function replacement so % in the diagnostics text is never
-	-- interpreted as a gsub capture reference (e.g. %1 in error messages).
-	return (tpl:gsub("{diagnostics}", function() return text end))
+	-- Use a function replacement so % in the text is never interpreted as a
+	-- gsub capture reference (e.g. %1 in error messages).
+	-- {content} is the canonical placeholder; {diagnostics} is a legacy alias.
+	local result = tpl:gsub("{content}", function() return text end)
+	return (result:gsub("{diagnostics}", function() return text end))
 end
 
 --- Send diagnostics to the configured backend.

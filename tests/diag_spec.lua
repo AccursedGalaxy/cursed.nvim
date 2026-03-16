@@ -5,6 +5,36 @@ local config = require("cursed.config")
 -- Bootstrap a minimal config so config.get() doesn't error in tests.
 config._set(vim.tbl_deep_extend("force", config.defaults, {}))
 
+describe("cursed.diag.apply_template()", function()
+	it("substitutes {content} with the given text", function()
+		config._set(vim.tbl_deep_extend("force", config.defaults, {
+			templates = { greet = "Hello:\n\n{content}" },
+		}))
+		assert.are.equal("Hello:\n\nworld", diag.apply_template("world", "greet"))
+		config._set(vim.tbl_deep_extend("force", config.defaults, {}))
+	end)
+
+	it("substitutes {diagnostics} as a legacy alias", function()
+		config._set(vim.tbl_deep_extend("force", config.defaults, {
+			templates = { legacy = "Fix:\n\n{diagnostics}" },
+		}))
+		assert.are.equal("Fix:\n\nsome error", diag.apply_template("some error", "legacy"))
+		config._set(vim.tbl_deep_extend("force", config.defaults, {}))
+	end)
+
+	it("returns text unchanged when the template does not exist", function()
+		assert.are.equal("raw text", diag.apply_template("raw text", "nonexistent"))
+	end)
+
+	it("does not interpret % in the text as a capture reference", function()
+		config._set(vim.tbl_deep_extend("force", config.defaults, {
+			templates = { pct = "Wrap: {content}" },
+		}))
+		assert.are.equal("Wrap: 100% done", diag.apply_template("100% done", "pct"))
+		config._set(vim.tbl_deep_extend("force", config.defaults, {}))
+	end)
+end)
+
 describe("cursed.diag.format_diagnostics()", function()
 	local orig_get, orig_name, orig_get_lines
 
