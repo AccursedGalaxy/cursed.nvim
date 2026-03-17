@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate tag matches M.version
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          version=$(grep 'M\.version' lua/cursed/init.lua | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          expected="v${version}"
+          if [ "$tag" != "$expected" ]; then
+            echo "ERROR: tag '$tag' does not match M.version '$version' (expected '$expected')"
+            exit 1
+          fi
+          echo "Version check passed: $tag"
+
+      - name: Extract changelog section
+        id: changelog
+        run: |
+          version=$(grep 'M\.version' lua/cursed/init.lua | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          body=$(awk "/^## \[${version}\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
+          if [ -z "$body" ]; then
+            echo "ERROR: no changelog section found for version $version"
+            exit 1
+          fi
+          echo "body<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$body" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: ${{ steps.changelog.outputs.body }}

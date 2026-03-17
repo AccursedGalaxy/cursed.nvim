@@ -1,5 +1,7 @@
 local M = {}
 
+M.version = "0.1.0"
+
 local config = require("cursed.config")
 local validate = require("cursed.validate")
 
