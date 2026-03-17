@@ -37,8 +37,12 @@ function M.apply_template(text, template_name)
 	-- Use a function replacement so % in the text is never interpreted as a
 	-- gsub capture reference (e.g. %1 in error messages).
 	-- {content} is the canonical placeholder; {diagnostics} is a legacy alias.
-	local result = tpl:gsub("{content}", function() return text end)
-	return (result:gsub("{diagnostics}", function() return text end))
+	local result = tpl:gsub("{content}", function()
+		return text
+	end)
+	return (result:gsub("{diagnostics}", function()
+		return text
+	end))
 end
 
 local function fire(event, data)

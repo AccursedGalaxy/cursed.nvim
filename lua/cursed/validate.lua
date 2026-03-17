@@ -73,7 +73,10 @@ function M.validate(config)
 			for k, v in pairs(config.keymaps) do
 				if not known_keymaps[k] then
 					vim.notify(
-						string.format("cursed: unknown keymap name '%s' — ignored (known: send, send_selection, preview_send, preview_close, preview_close_esc)", k),
+						string.format(
+							"cursed: unknown keymap name '%s' — ignored (known: send, send_selection, preview_send, preview_close, preview_close_esc)",
+							k
+						),
 						vim.log.levels.WARN
 					)
 				elseif v ~= false and type(v) ~= "string" then
@@ -115,10 +118,7 @@ function M.validate(config)
 				if type(as.scope) ~= "string" then
 					table.insert(errors, type_err("auto_send.scope", "string", type(as.scope)))
 				elseif not valid_scopes[as.scope] then
-					table.insert(
-						errors,
-						'cursed: config.auto_send.scope must be one of: "buffer", "all_buffers", "workspace"'
-					)
+					table.insert(errors, 'cursed: config.auto_send.scope must be one of: "buffer", "all_buffers", "workspace"')
 				end
 			end
 		end

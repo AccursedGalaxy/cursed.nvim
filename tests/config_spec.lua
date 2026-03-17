@@ -161,12 +161,12 @@ describe("cursed.validate", function()
 	it("accepts a valid pre_send config", function()
 		local errors = validate.validate({
 			pre_send = {
-				command   = "/clear",
-				delay_ms  = 500,
-				send      = nil,
+				command = "/clear",
+				delay_ms = 500,
+				send = nil,
 				auto_send = false,
-				preview   = nil,
-				pick      = false,
+				preview = nil,
+				pick = false,
 				selection = nil,
 			},
 		})

@@ -89,13 +89,7 @@ local function fmt_custom(diags, bufnr, fn)
 		end
 		local t = type(result)
 		if t ~= "string" and t ~= "nil" then
-			error(
-				string.format(
-					"cursed: config.format function must return string or nil, got %s",
-					t
-				),
-				0
-			)
+			error(string.format("cursed: config.format function must return string or nil, got %s", t), 0)
 		end
 		if result then
 			lines[#lines + 1] = result

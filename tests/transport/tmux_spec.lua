@@ -30,25 +30,31 @@ describe("cursed.transport.tmux.send()", function()
 	before_each(function()
 		notifications, system_calls, jobstart_calls = {}, {}, {}
 
-		orig_io_open  = io.open
-		orig_system   = vim.fn.system
+		orig_io_open = io.open
+		orig_system = vim.fn.system
 		orig_jobstart = vim.fn.jobstart
-		orig_delete   = vim.fn.delete
+		orig_delete = vim.fn.delete
 		orig_tempname = vim.fn.tempname
 		orig_defer_fn = vim.defer_fn
 		orig_schedule = vim.schedule
-		orig_notify   = vim.notify
-		orig_vim_v    = vim.v
+		orig_notify = vim.notify
+		orig_vim_v = vim.v
 
 		-- Replace vim.v with a plain table so shell_error is writable in tests
 		vim.v = setmetatable({ shell_error = 0 }, { __index = orig_vim_v })
 
 		-- Default stubs (happy path)
-		vim.fn.tempname = function() return "/tmp/cursed_test_tmp" end
-		vim.fn.delete   = function() end
-		vim.defer_fn    = function(fn, _) fn() end -- call immediately, no real timer
-		vim.schedule    = function(fn) fn() end
-		vim.notify      = function(msg, level)
+		vim.fn.tempname = function()
+			return "/tmp/cursed_test_tmp"
+		end
+		vim.fn.delete = function() end
+		vim.defer_fn = function(fn, _)
+			fn()
+		end -- call immediately, no real timer
+		vim.schedule = function(fn)
+			fn()
+		end
+		vim.notify = function(msg, level)
 			table.insert(notifications, { msg = msg, level = level })
 		end
 
@@ -75,22 +81,26 @@ describe("cursed.transport.tmux.send()", function()
 	end)
 
 	after_each(function()
-		io.open         = orig_io_open
-		vim.fn.system   = orig_system
+		io.open = orig_io_open
+		vim.fn.system = orig_system
 		vim.fn.jobstart = orig_jobstart
-		vim.fn.delete   = orig_delete
+		vim.fn.delete = orig_delete
 		vim.fn.tempname = orig_tempname
-		vim.defer_fn    = orig_defer_fn
-		vim.schedule    = orig_schedule
-		vim.notify      = orig_notify
-		vim.v           = orig_vim_v
+		vim.defer_fn = orig_defer_fn
+		vim.schedule = orig_schedule
+		vim.notify = orig_notify
+		vim.v = orig_vim_v
 	end)
 
 	-- 1. Temp file error
 	it("returns false and notifies when io.open fails", function()
-		io.open = function(_, _) return nil end
+		io.open = function(_, _)
+			return nil
+		end
 		local ok
-		tmux.send("hello", default_opts, function(result) ok = result end)
+		tmux.send("hello", default_opts, function(result)
+			ok = result
+		end)
 		assert.is_false(ok)
 		assert.equals(1, #notifications)
 		assert.truthy(notifications[1].msg:find("temp file"))
@@ -104,7 +114,9 @@ describe("cursed.transport.tmux.send()", function()
 			return ""
 		end
 		local ok
-		tmux.send("hello", default_opts, function(result) ok = result end)
+		tmux.send("hello", default_opts, function(result)
+			ok = result
+		end)
 		assert.is_false(ok)
 		assert.equals(1, #notifications)
 		assert.truthy(notifications[1].msg:find("load tmux buffer"))
@@ -113,7 +125,9 @@ describe("cursed.transport.tmux.send()", function()
 	-- 3. Sync mode, no pre_command: paste-buffer succeeds
 	it("calls paste-buffer via system and returns true", function()
 		local ok
-		tmux.send("hello", default_opts, function(result) ok = result end)
+		tmux.send("hello", default_opts, function(result)
+			ok = result
+		end)
 		assert.is_true(ok)
 		-- At least one system call should be paste-buffer
 		local found = false
@@ -137,7 +151,9 @@ describe("cursed.transport.tmux.send()", function()
 			return ""
 		end
 		local ok
-		tmux.send("hello", default_opts, function(result) ok = result end)
+		tmux.send("hello", default_opts, function(result)
+			ok = result
+		end)
 		assert.is_false(ok)
 		assert.equals(1, #notifications)
 		assert.truthy(notifications[1].msg:find("failed to paste"))
@@ -147,28 +163,28 @@ describe("cursed.transport.tmux.send()", function()
 	it("calls send-keys then deferred paste when pre_command is set", function()
 		local opts = { pane_target = "test_pane", auto_submit = false, pre_command = "clear" }
 		local ok
-		tmux.send("hello", opts, function(result) ok = result end)
+		tmux.send("hello", opts, function(result)
+			ok = result
+		end)
 		assert.is_true(ok)
 		-- system_calls[1] = load-buffer
 		-- system_calls[2] = send-keys + "clear"
 		-- system_calls[3] = paste-buffer (from deferred fn, fires immediately in test)
-		assert.is_true(cmd_contains(system_calls[2], "send-keys", "clear"),
-			"expected send-keys + clear in system_calls[2]")
-		assert.is_true(cmd_contains(system_calls[3], "paste-buffer"),
-			"expected paste-buffer in system_calls[3]")
+		assert.is_true(cmd_contains(system_calls[2], "send-keys", "clear"), "expected send-keys + clear in system_calls[2]")
+		assert.is_true(cmd_contains(system_calls[3], "paste-buffer"), "expected paste-buffer in system_calls[3]")
 	end)
 
 	-- 6. Async mode, no pre_command: paste then Enter
 	it("chains paste jobstart then deferred Enter jobstart", function()
 		local opts = { pane_target = "test_pane", auto_submit = true }
 		local ok
-		tmux.send("hello", opts, function(result) ok = result end)
+		tmux.send("hello", opts, function(result)
+			ok = result
+		end)
 		assert.is_true(ok)
 		assert.is_true(#jobstart_calls >= 2, "expected at least 2 jobstart calls")
-		assert.is_true(cmd_contains(jobstart_calls[1].cmd, "paste-buffer"),
-			"first jobstart should be paste-buffer")
-		assert.is_true(cmd_contains(jobstart_calls[2].cmd, "Enter"),
-			"second jobstart should send Enter")
+		assert.is_true(cmd_contains(jobstart_calls[1].cmd, "paste-buffer"), "first jobstart should be paste-buffer")
+		assert.is_true(cmd_contains(jobstart_calls[2].cmd, "Enter"), "second jobstart should send Enter")
 	end)
 
 	-- 7. Async mode, paste job exits non-zero
@@ -191,11 +207,11 @@ describe("cursed.transport.tmux.send()", function()
 		local opts = { pane_target = "test_pane", auto_submit = true, pre_command = "clear" }
 		tmux.send("hello", opts)
 		assert.is_true(#jobstart_calls >= 3, "expected at least 3 jobstart calls")
-		assert.is_true(cmd_contains(jobstart_calls[1].cmd, "send-keys", "clear"),
-			"first jobstart should be send-keys + pre_command")
-		assert.is_true(cmd_contains(jobstart_calls[2].cmd, "paste-buffer"),
-			"second jobstart should be paste-buffer")
-		assert.is_true(cmd_contains(jobstart_calls[3].cmd, "Enter"),
-			"third jobstart should send Enter")
+		assert.is_true(
+			cmd_contains(jobstart_calls[1].cmd, "send-keys", "clear"),
+			"first jobstart should be send-keys + pre_command"
+		)
+		assert.is_true(cmd_contains(jobstart_calls[2].cmd, "paste-buffer"), "second jobstart should be paste-buffer")
+		assert.is_true(cmd_contains(jobstart_calls[3].cmd, "Enter"), "third jobstart should send Enter")
 	end)
 end)

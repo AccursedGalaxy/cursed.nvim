@@ -17,7 +17,9 @@ function M.send(text, opts, on_done)
 	local file = io.open(tmp, "w")
 	if not file then
 		vim.notify("cursed: failed to create temp file", vim.log.levels.ERROR)
-		if on_done then on_done(false) end
+		if on_done then
+			on_done(false)
+		end
 		return
 	end
 	-- Wrap in bracketed paste sequences so embedded newlines are not interpreted
@@ -29,7 +31,9 @@ function M.send(text, opts, on_done)
 	vim.fn.delete(tmp)
 	if vim.v.shell_error ~= 0 then
 		vim.notify("cursed: failed to load tmux buffer (is tmux running?)", vim.log.levels.ERROR)
-		if on_done then on_done(false) end
+		if on_done then
+			on_done(false)
+		end
 		return
 	end
 
@@ -41,47 +45,50 @@ function M.send(text, opts, on_done)
 
 		local function do_enter()
 			vim.defer_fn(function()
-				vim.fn.jobstart(
-					{ "tmux", "send-keys", "-t", pane_target, "Enter" },
-					{ on_exit = function(_, code)
+				vim.fn.jobstart({ "tmux", "send-keys", "-t", pane_target, "Enter" }, {
+					on_exit = function(_, code)
 						vim.schedule(function()
-							if on_done then on_done(code == 0) end
+							if on_done then
+								on_done(code == 0)
+							end
 						end)
-					end }
-				)
+					end,
+				})
 			end, paste_delay_ms)
 		end
 
 		local function do_paste()
-			vim.fn.jobstart(
-				{ "tmux", "paste-buffer", "-b", "cursed_diag", "-t", pane_target },
-				{ on_exit = function(_, code)
+			vim.fn.jobstart({ "tmux", "paste-buffer", "-b", "cursed_diag", "-t", pane_target }, {
+				on_exit = function(_, code)
 					if code == 0 then
 						do_enter()
 					else
 						vim.schedule(function()
 							vim.notify("cursed: failed to paste to tmux pane '" .. pane_target .. "'", vim.log.levels.ERROR)
-							if on_done then on_done(false) end
+							if on_done then
+								on_done(false)
+							end
 						end)
 					end
-				end }
-			)
+				end,
+			})
 		end
 
 		if pre_command then
-			vim.fn.jobstart(
-				{ "tmux", "send-keys", "-t", pane_target, pre_command, "Enter" },
-				{ on_exit = function(_, code)
+			vim.fn.jobstart({ "tmux", "send-keys", "-t", pane_target, pre_command, "Enter" }, {
+				on_exit = function(_, code)
 					if code ~= 0 then
 						vim.schedule(function()
 							vim.notify("cursed: pre-command failed (exit " .. code .. ")", vim.log.levels.ERROR)
-							if on_done then on_done(false) end
+							if on_done then
+								on_done(false)
+							end
 						end)
 					else
 						vim.defer_fn(do_paste, pre_delay)
 					end
-				end }
-			)
+				end,
+			})
 		else
 			do_paste()
 		end
@@ -94,19 +101,27 @@ function M.send(text, opts, on_done)
 				vim.fn.system({ "tmux", "paste-buffer", "-b", "cursed_diag", "-t", pane_target })
 				if vim.v.shell_error ~= 0 then
 					vim.notify("cursed: failed to paste to tmux pane '" .. pane_target .. "'", vim.log.levels.ERROR)
-					if on_done then on_done(false) end
+					if on_done then
+						on_done(false)
+					end
 				else
-					if on_done then on_done(true) end
+					if on_done then
+						on_done(true)
+					end
 				end
 			end, pre_delay)
 		else
 			vim.fn.system({ "tmux", "paste-buffer", "-b", "cursed_diag", "-t", pane_target })
 			if vim.v.shell_error ~= 0 then
 				vim.notify("cursed: failed to paste to tmux pane '" .. pane_target .. "'", vim.log.levels.ERROR)
-				if on_done then on_done(false) end
+				if on_done then
+					on_done(false)
+				end
 				return
 			end
-			if on_done then on_done(true) end
+			if on_done then
+				on_done(true)
+			end
 		end
 	end
 end
