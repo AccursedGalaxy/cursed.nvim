@@ -65,8 +65,7 @@ rocks.nvim (rocks.toml): >toml
 CONFIGURATION                                             *cursed-configuration*
 
 Pass a table to |cursed.setup()|. All keys are optional; unset keys use the
-defaults shown below. Passing unknown keys is allowed (they are merged through
-without validation).
+defaults shown below.
 
 >lua
   require("cursed").setup({
@@ -76,6 +75,7 @@ without validation).
       pane_target    = "{left}",     -- string: tmux target-pane syntax
       auto_submit    = true,         -- true  → paste + Enter (Claude starts immediately)
                                      -- false → paste only; edit in pane, press Enter yourself
+      paste_delay_ms = 300,          -- ms between paste and Enter; increase on slow machines
     },
 
     -- ── What to collect ──────────────────────────────────────────────────
@@ -87,12 +87,18 @@ without validation).
                                      -- "with_source_lines" | function(d, bufnr)
 
     -- ── Prompt templates ─────────────────────────────────────────────────
-    -- {diagnostics} is replaced with the formatted block.
-    -- Pass the key as arg to :CursedSendDiags, e.g. :CursedSendDiags explain
+    -- Use {content} as the placeholder ({diagnostics} is a legacy alias).
+    -- Pass the key as arg to :CursedSendDiags or :CursedSendSelection,
+    -- e.g. :CursedSendDiags explain  or  :CursedSendSelection fix_selection
     templates = {
+      -- diagnostics templates
       fix     = "Please fix these diagnostics:\n\n{diagnostics}",
       explain = "Explain these diagnostics:\n\n{diagnostics}",
       test    = "Write tests that cover these diagnostics:\n\n{diagnostics}",
+      -- selection templates
+      fix_selection     = "Please fix the following code:\n\n{content}",
+      explain_selection = "Explain the following code:\n\n{content}",
+      review            = "Review the following code and suggest improvements:\n\n{content}",
     },
     default_template = nil,          -- string | nil: applied automatically on every send
 
@@ -107,8 +113,10 @@ without validation).
 
     -- ── Keymaps ───────────────────────────────────────────────────────────
     -- Set any value to false to disable, or a string to remap.
+    -- Unknown key names produce a warning.
     keymaps = {
-      send              = nil,       -- string | nil: global, e.g. "<leader>cd"
+      send              = nil,       -- string | nil: normal-mode, e.g. "<leader>cd"
+      send_selection    = nil,       -- string | nil: visual-mode, e.g. "<leader>cs"
       preview_send      = "<CR>",    -- confirm & send inside preview window
       preview_close     = "q",       -- close preview without sending
       preview_close_esc = "<Esc>",   -- close preview without sending (Esc)
@@ -125,6 +133,7 @@ without validation).
       auto_send = nil,     -- nil: follows global  (consider false to reduce noise)
       preview   = nil,     -- nil: follows global  (:CursedPreview send action)
       pick      = nil,     -- nil: follows global  (:CursedPick send action)
+      selection = nil,     -- nil: follows global  (:CursedSendSelection / visual keymap)
     },
   })
 <
@@ -143,8 +152,12 @@ Options ~
 
 `tmux.auto_submit` (boolean, default: `true`)
   Paste the text then send Enter after a short delay so Claude starts
-  processing. The Enter is sent asynchronously (~300 ms after the paste) to
+  processing. The Enter is sent asynchronously after `paste_delay_ms` to
   avoid racing with Claude Code's input handler.
+
+`tmux.paste_delay_ms` (number, default: `300`)
+  Milliseconds between the paste and the Enter keypress when `auto_submit`
+  is `true`. Increase this on slow machines or when sending large payloads.
 
 `scope` (string, default: `"buffer"`)
   Which diagnostics to collect:
@@ -166,8 +179,10 @@ Options ~
     returning `nil` omits that diagnostic from the output
 
 `templates` (table)
-  Named templates for wrapping the diagnostics block. Use `{diagnostics}` as
-  the placeholder. Add any key name; pass it to |:CursedSendDiags|.
+  Named templates for wrapping content before sending. Use `{content}` as the
+  placeholder; `{diagnostics}` is accepted as a legacy alias. Any key name is
+  valid; pass it as an argument to |:CursedSendDiags| or
+  |:CursedSendSelection|.
 
 `default_template` (string|nil, default: `nil`)
   Template to apply automatically on every send. `nil` means no wrapping.
@@ -190,6 +205,11 @@ Options ~
     Global normal-mode keymap bound to `send_diagnostics()`. Equivalent to
     a no-argument |:CursedSendDiags|. Example: `"<leader>cd"`.
 
+  `keymaps.send_selection` (string|nil, default: `nil`)
+    Visual-mode keymap bound to |:CursedSendSelection|. Example:
+    `"<leader>cs"`. When triggered from visual mode the current selection is
+    used; you are then prompted for an instruction to prepend.
+
   `keymaps.preview_send` (string|false, default: `"<CR>"`)
     Inside |:CursedPreview|: send the (possibly edited) content and close.
 
@@ -198,6 +218,8 @@ Options ~
 
   `keymaps.preview_close_esc` (string|false, default: `"<Esc>"`)
     Inside |:CursedPreview|: close without sending (Esc variant).
+
+  Note: passing an unknown keymap key emits a `WARN` notification.
 
 `pre_send` (table)
   Send a command to the tmux pane *before* pasting diagnostics. Useful for
@@ -212,7 +234,7 @@ Options ~
     diagnostics. Gives Claude Code time to process the command.
 
   Per-feature keys: `pre_send.send`, `pre_send.auto_send`, `pre_send.preview`,
-  `pre_send.pick` (false|nil, default: `nil`)
+  `pre_send.pick`, `pre_send.selection` (false|nil, default: `nil`)
     Set to `false` to suppress the pre-send command for that specific feature.
     `nil` means the feature follows the global `pre_send.command` setting.
     Example: set `auto_send = false` to skip `/clear` on automatic sends.
@@ -238,6 +260,26 @@ COMMANDS                                                      *cursed-commands*
     :CursedSendDiags
     :CursedSendDiags workspace
     :CursedSendDiags explain
+<
+
+:CursedSendSelection [{template}]                      *:CursedSendSelection*
+  Send the current visual selection to the configured Claude Code pane.
+
+  When called without an argument, opens `vim.ui.input` so you can type an
+  instruction; the instruction is prepended before the file context and code.
+
+  When called with a template name, applies that template immediately without
+  prompting. The selected code is substituted into the `{content}` placeholder.
+
+  The command accepts a range; it is typically invoked as `'<,'>CursedSendSelection`.
+
+  Examples: >
+    :'<,'>CursedSendSelection
+    :'<,'>CursedSendSelection fix_selection
+    :'<,'>CursedSendSelection review
+<
+  Or via the `send_selection` keymap (visual mode): >lua
+    keymaps = { send_selection = "<leader>cs" }
 <
 
 :CursedPreview                                              *:CursedPreview*
