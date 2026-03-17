@@ -6,7 +6,6 @@ Route diagnostics, selections, and commands from Neovim to any tmux pane — con
 
 - Neovim >= 0.11.0
 - [tmux](https://github.com/tmux/tmux) with at least one active session
-- [Claude Code](https://claude.ai/code) running inside a tmux pane
 
 ## Installation
 
@@ -33,7 +32,7 @@ require("cursed").setup({
   backend = "tmux",            -- only "tmux" is currently supported
   tmux = {
     pane_target = "{left}",    -- tmux target-pane: "{left}", "{right}", "%3", "session:1.0", …
-    auto_submit = true,        -- true  → paste + Enter so Claude starts immediately
+    auto_submit = true,        -- true  → paste + Enter -> so the target process starts immediately
                                -- false → paste only; go to pane, edit, press Enter yourself
     paste_delay_ms = 300,      -- ms between paste and Enter; increase on slow machines or large diagnostics
   },
@@ -119,22 +118,22 @@ require("cursed").setup({
 
 ### Sending arbitrary commands
 
-`send_command(text, opts?)` sends any raw string to the configured pane. Use it for keymaps that trigger Claude Code slash commands without leaving Neovim.
+`send_command(text, opts?)` sends any raw string to the configured pane. Useful for triggering commands in whatever process is running there — a REPL, a test runner, an AI tool like Claude Code, anything.
 
 ```lua
 local cursed = require("cursed")
 
--- Fixed command
+-- Fixed command (e.g. reset context in Claude Code, clear a REPL, re-run tests)
 vim.keymap.set("n", "<leader>cC", function()
   cursed.send_command("/clear")
-end, { desc = "Clear Claude Code context" })
+end, { desc = "Send /clear to target pane" })
 
--- Interactive prompt
+-- Interactive: type anything and send it to the pane
 vim.keymap.set("n", "<leader>c:", function()
-  vim.ui.input({ prompt = "Claude> " }, function(input)
+  vim.ui.input({ prompt = "Send to pane> " }, function(input)
     if input and input ~= "" then cursed.send_command(input) end
   end)
-end, { desc = "Send arbitrary command to Claude Code" })
+end, { desc = "Send arbitrary command to target pane" })
 ```
 
 Or from the command line: `:CursedSendCommand /clear`
@@ -167,7 +166,7 @@ Or from the command line: `:CursedSendCommand /clear`
 
 1. Open a file that has LSP diagnostics.
 2. Run `:CursedSendDiags` (or your keymap).
-3. Claude Code in the pane to your left receives the formatted diagnostics and — if `auto_submit = true` — Enter is sent automatically (after `tmux.paste_delay_ms`) so Claude starts processing.
+3. The process in the target pane receives the formatted diagnostics and — if `auto_submit = true` — Enter is sent automatically (after `tmux.paste_delay_ms`). Works with Claude Code, any other AI CLI, a REPL, or any tool that reads stdin.
 
 **Send only errors:**
 ```vim
