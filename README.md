@@ -1,6 +1,6 @@
 # cursed.nvim
 
-Send your buffer's LSP diagnostics to Claude Code in a tmux pane — one command, no copy-pasting.
+Route diagnostics, selections, and commands from Neovim to any tmux pane — configurable, template-driven, zero copy-paste.
 
 ## Requirements
 
