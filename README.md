@@ -23,13 +23,6 @@ Send your buffer's LSP diagnostics to Claude Code in a tmux pane — one command
 }
 ```
 
-**rocks.nvim** (rocks.toml)
-
-```toml
-[plugins]
-"cursed.nvim" = "scm"
-```
-
 ## Configuration
 
 All options are optional. Defaults are shown below.
