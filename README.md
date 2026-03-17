@@ -29,7 +29,7 @@ All options are optional. Defaults are shown below.
 
 ```lua
 require("cursed").setup({
-  -- ── Transport ──────────────────────────────────────────────────────────────
+  -- Transport
   backend = "tmux",            -- only "tmux" is currently supported
   tmux = {
     pane_target = "{left}",    -- tmux target-pane: "{left}", "{right}", "%3", "session:1.0", …
@@ -38,15 +38,15 @@ require("cursed").setup({
     paste_delay_ms = 300,      -- ms between paste and Enter; increase on slow machines or large diagnostics
   },
 
-  -- ── What to collect ────────────────────────────────────────────────────────
+  -- What to collect
   scope        = "buffer",     -- "buffer" | "all_buffers" | "workspace"
   min_severity = vim.diagnostic.severity.HINT,  -- HINT=4 INFO=3 WARN=2 ERROR=1
 
-  -- ── How to format ──────────────────────────────────────────────────────────
+  -- How to format
   format = "default",          -- "default" | "compact" | "with_source_lines"
                                -- or function(diag, bufnr) -> string|nil
 
-  -- ── Prompt templates ───────────────────────────────────────────────────────
+  -- Prompt templates
   -- Use {content} as the placeholder — it is replaced by the formatted
   -- diagnostics or selected code depending on how the template is invoked.
   -- {diagnostics} still works as a legacy alias.
@@ -64,7 +64,7 @@ require("cursed").setup({
   },
   default_template = nil,      -- apply a template automatically on every send, or nil
 
-  -- ── Auto-send on DiagnosticChanged ─────────────────────────────────────────
+  -- Auto-send on DiagnosticChanged
   auto_send = {
     enabled      = false,
     event        = "DiagnosticChanged",
@@ -73,7 +73,7 @@ require("cursed").setup({
     scope        = "buffer",
   },
 
-  -- ── Keymaps ────────────────────────────────────────────────────────────────
+  -- Keymaps
   -- Set any value to false to disable, or a string to remap.
   keymaps = {
     send              = nil,       -- global normal-mode: e.g. "<leader>cd" → send_diagnostics()
@@ -83,7 +83,7 @@ require("cursed").setup({
     preview_close_esc = "<Esc>",   -- inside :CursedPreview: close without sending (Esc)
   },
 
-  -- ── Pre-send command ───────────────────────────────────────────────────────
+  -- Pre-send command
   -- Sends a command to the pane *before* pasting diagnostics.
   -- Typical use: "/clear" resets Claude's context so history doesn't accumulate.
   -- command = nil disables the feature entirely.
