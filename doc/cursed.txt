@@ -69,7 +69,7 @@ defaults shown below.
 
 >lua
   require("cursed").setup({
-    -- ── Transport ────────────────────────────────────────────────────────
+    -- Transport
     backend          = "tmux",       -- string: "tmux" (only option for now)
     tmux = {
       pane_target    = "{left}",     -- string: tmux target-pane syntax
@@ -78,15 +78,15 @@ defaults shown below.
       paste_delay_ms = 300,          -- ms between paste and Enter; increase on slow machines
     },
 
-    -- ── What to collect ──────────────────────────────────────────────────
+    -- What to collect
     scope            = "buffer",     -- "buffer" | "all_buffers" | "workspace"
     min_severity     = vim.diagnostic.severity.HINT,  -- HINT=4 INFO=3 WARN=2 ERROR=1
 
-    -- ── How to format ────────────────────────────────────────────────────
+    -- How to format
     format           = "default",    -- "default" | "compact" |
                                      -- "with_source_lines" | function(d, bufnr)
 
-    -- ── Prompt templates ─────────────────────────────────────────────────
+    -- Prompt templates
     -- Use {content} as the placeholder ({diagnostics} is a legacy alias).
     -- Pass the key as arg to :CursedSendDiags or :CursedSendSelection,
     -- e.g. :CursedSendDiags explain  or  :CursedSendSelection fix_selection
@@ -102,7 +102,7 @@ defaults shown below.
     },
     default_template = nil,          -- string | nil: applied automatically on every send
 
-    -- ── Auto-send on DiagnosticChanged ────────────────────────────────────
+    -- Auto-send on DiagnosticChanged
     auto_send = {
       enabled        = false,        -- boolean
       event          = "DiagnosticChanged",  -- string: autocmd event
@@ -111,7 +111,7 @@ defaults shown below.
       scope          = "buffer",
     },
 
-    -- ── Keymaps ───────────────────────────────────────────────────────────
+    -- Keymaps
     -- Set any value to false to disable, or a string to remap.
     -- Unknown key names produce a warning.
     keymaps = {
@@ -122,7 +122,7 @@ defaults shown below.
       preview_close_esc = "<Esc>",   -- close preview without sending (Esc)
     },
 
-    -- ── Pre-send command ──────────────────────────────────────────────────
+    -- Pre-send command
     -- Sends a command to the pane before pasting diagnostics.
     -- command = nil disables the feature entirely.
     -- Per-feature: nil = follow global, false = suppress for that feature.
