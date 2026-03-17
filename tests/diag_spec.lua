@@ -1,16 +1,17 @@
 ---@diagnostic disable: duplicate-set-field, undefined-field, need-check-nil
+local util = require("cursed.util")
 local diag = require("cursed.diag")
 local config = require("cursed.config")
 
 -- Bootstrap a minimal config so config.get() doesn't error in tests.
 config._set(vim.tbl_deep_extend("force", config.defaults, {}))
 
-describe("cursed.diag.apply_template()", function()
+describe("cursed.util.apply_template()", function()
 	it("substitutes {content} with the given text", function()
 		config._set(vim.tbl_deep_extend("force", config.defaults, {
 			templates = { greet = "Hello:\n\n{content}" },
 		}))
-		assert.are.equal("Hello:\n\nworld", diag.apply_template("world", "greet"))
+		assert.are.equal("Hello:\n\nworld", util.apply_template("world", "greet"))
 		config._set(vim.tbl_deep_extend("force", config.defaults, {}))
 	end)
 
@@ -18,19 +19,19 @@ describe("cursed.diag.apply_template()", function()
 		config._set(vim.tbl_deep_extend("force", config.defaults, {
 			templates = { legacy = "Fix:\n\n{diagnostics}" },
 		}))
-		assert.are.equal("Fix:\n\nsome error", diag.apply_template("some error", "legacy"))
+		assert.are.equal("Fix:\n\nsome error", util.apply_template("some error", "legacy"))
 		config._set(vim.tbl_deep_extend("force", config.defaults, {}))
 	end)
 
 	it("returns text unchanged when the template does not exist", function()
-		assert.are.equal("raw text", diag.apply_template("raw text", "nonexistent"))
+		assert.are.equal("raw text", util.apply_template("raw text", "nonexistent"))
 	end)
 
 	it("does not interpret % in the text as a capture reference", function()
 		config._set(vim.tbl_deep_extend("force", config.defaults, {
 			templates = { pct = "Wrap: {content}" },
 		}))
-		assert.are.equal("Wrap: 100% done", diag.apply_template("100% done", "pct"))
+		assert.are.equal("Wrap: 100% done", util.apply_template("100% done", "pct"))
 		config._set(vim.tbl_deep_extend("force", config.defaults, {}))
 	end)
 end)

@@ -20,8 +20,8 @@ function M.check()
 	end
 
 	-- setup() called
-	local cursed = require("cursed")
-	if cursed.config ~= nil then
+	local setup_ok = pcall(require("cursed.config").get)
+	if setup_ok then
 		health.ok("setup() has been called")
 	else
 		health.warn("setup() has not been called — add require('cursed').setup() to your config")

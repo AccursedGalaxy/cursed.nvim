@@ -26,12 +26,11 @@ function M.setup(opts)
 		return
 	end
 
-	M.config = merged
 	config._set(merged)
 
 	teardown_auto_send()
 
-	local km = M.config.keymaps
+	local km = config.get().keymaps
 	if km.send then
 		vim.keymap.set("n", km.send, M.send_diagnostics, {
 			desc = "Send diagnostics to Claude Code tmux pane",
@@ -44,7 +43,7 @@ function M.setup(opts)
 		})
 	end
 
-	local as = M.config.auto_send
+	local as = config.get().auto_send
 	if as and as.enabled then
 		local group = vim.api.nvim_create_augroup("CursedAutoSend", { clear = true })
 		local debounce_ms = as.debounce_ms or 500
@@ -60,11 +59,12 @@ function M.setup(opts)
 					auto_send_timer = nil
 				end
 				auto_send_timer = vim.uv.new_timer()
+				local timer_ref = auto_send_timer
 				auto_send_timer:start(
 					debounce_ms,
 					0,
 					vim.schedule_wrap(function()
-						if auto_send_timer then
+						if auto_send_timer == timer_ref then
 							auto_send_timer:close()
 							auto_send_timer = nil
 						end

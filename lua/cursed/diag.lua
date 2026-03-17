@@ -1,11 +1,7 @@
 local M = {}
 
-local severity_labels = {
-	[vim.diagnostic.severity.ERROR] = "ERROR",
-	[vim.diagnostic.severity.WARN] = "WARN",
-	[vim.diagnostic.severity.INFO] = "INFO",
-	[vim.diagnostic.severity.HINT] = "HINT",
-}
+local util = require("cursed.util")
+local severity_labels = util.severity_labels
 
 -- ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -183,20 +179,6 @@ function M.format_diagnostics(bufnr, opts)
 	end
 end
 
-function M.apply_template(text, template_name)
-	local cfg = require("cursed.config").get()
-	local templates = cfg.templates or {}
-	local tpl = templates[template_name]
-	if not tpl then
-		return text
-	end
-	-- Use a function replacement so % in the text is never interpreted as a
-	-- gsub capture reference (e.g. %1 in error messages).
-	-- {content} is the canonical placeholder; {diagnostics} is a legacy alias.
-	local result = tpl:gsub("{content}", function() return text end)
-	return (result:gsub("{diagnostics}", function() return text end))
-end
-
 --- Send diagnostics to the configured backend.
 --- @param opts table Optional overrides: scope, min_severity, format, template, pane_target, auto_submit, backend, from_auto_send
 function M.send(opts)
@@ -215,7 +197,7 @@ function M.send(opts)
 
 	local template_name = opts.template or cfg.default_template
 	if template_name then
-		text = M.apply_template(text, template_name)
+		text = util.apply_template(text, template_name)
 	end
 
 	require("cursed.util").send_to_transport(text, {

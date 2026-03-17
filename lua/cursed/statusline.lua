@@ -41,12 +41,14 @@ end
 
 --- lualine component table.
 --- Usage: require("lualine").setup({ sections = { lualine_x = { require("cursed.statusline").lualine } } })
+local _cached = ""
 M.lualine = {
 	function()
-		return M.component()
+		return _cached
 	end,
 	cond = function()
-		return M.component() ~= ""
+		_cached = M.component()
+		return _cached ~= ""
 	end,
 }
 

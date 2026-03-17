@@ -15,12 +15,7 @@ function M.pick()
 	local actions = require("telescope.actions")
 	local action_state = require("telescope.actions.state")
 
-	local sev_names = {
-		[vim.diagnostic.severity.ERROR] = "ERROR",
-		[vim.diagnostic.severity.WARN] = "WARN",
-		[vim.diagnostic.severity.INFO] = "INFO",
-		[vim.diagnostic.severity.HINT] = "HINT",
-	}
+	local sev_names = require("cursed.util").severity_labels
 
 	local entries = {}
 	for _, buf in ipairs(vim.api.nvim_list_bufs()) do

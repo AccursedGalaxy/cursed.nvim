@@ -78,7 +78,7 @@ function M.send(opts)
 	-- Template path: used by :CursedSendSelection <template>
 	if opts.template then
 		local code = table.concat(sel.lines, "\n")
-		local text = require("cursed.diag").apply_template(code, opts.template)
+		local text = require("cursed.util").apply_template(code, opts.template)
 		dispatch(text, opts)
 		return
 	end

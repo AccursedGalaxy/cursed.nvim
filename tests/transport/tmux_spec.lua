@@ -89,7 +89,8 @@ describe("cursed.transport.tmux.send()", function()
 	-- 1. Temp file error
 	it("returns false and notifies when io.open fails", function()
 		io.open = function(_, _) return nil end
-		local ok = tmux.send("hello", default_opts)
+		local ok
+		tmux.send("hello", default_opts, function(result) ok = result end)
 		assert.is_false(ok)
 		assert.equals(1, #notifications)
 		assert.truthy(notifications[1].msg:find("temp file"))
@@ -102,7 +103,8 @@ describe("cursed.transport.tmux.send()", function()
 			vim.v.shell_error = 1
 			return ""
 		end
-		local ok = tmux.send("hello", default_opts)
+		local ok
+		tmux.send("hello", default_opts, function(result) ok = result end)
 		assert.is_false(ok)
 		assert.equals(1, #notifications)
 		assert.truthy(notifications[1].msg:find("load tmux buffer"))
@@ -110,7 +112,8 @@ describe("cursed.transport.tmux.send()", function()
 
 	-- 3. Sync mode, no pre_command: paste-buffer succeeds
 	it("calls paste-buffer via system and returns true", function()
-		local ok = tmux.send("hello", default_opts)
+		local ok
+		tmux.send("hello", default_opts, function(result) ok = result end)
 		assert.is_true(ok)
 		-- At least one system call should be paste-buffer
 		local found = false
@@ -133,7 +136,8 @@ describe("cursed.transport.tmux.send()", function()
 			vim.v.shell_error = (call_count >= 2) and 1 or 0
 			return ""
 		end
-		local ok = tmux.send("hello", default_opts)
+		local ok
+		tmux.send("hello", default_opts, function(result) ok = result end)
 		assert.is_false(ok)
 		assert.equals(1, #notifications)
 		assert.truthy(notifications[1].msg:find("failed to paste"))
@@ -142,7 +146,8 @@ describe("cursed.transport.tmux.send()", function()
 	-- 5. Sync mode, with pre_command
 	it("calls send-keys then deferred paste when pre_command is set", function()
 		local opts = { pane_target = "test_pane", auto_submit = false, pre_command = "clear" }
-		local ok = tmux.send("hello", opts)
+		local ok
+		tmux.send("hello", opts, function(result) ok = result end)
 		assert.is_true(ok)
 		-- system_calls[1] = load-buffer
 		-- system_calls[2] = send-keys + "clear"
@@ -156,7 +161,8 @@ describe("cursed.transport.tmux.send()", function()
 	-- 6. Async mode, no pre_command: paste then Enter
 	it("chains paste jobstart then deferred Enter jobstart", function()
 		local opts = { pane_target = "test_pane", auto_submit = true }
-		local ok = tmux.send("hello", opts)
+		local ok
+		tmux.send("hello", opts, function(result) ok = result end)
 		assert.is_true(ok)
 		assert.is_true(#jobstart_calls >= 2, "expected at least 2 jobstart calls")
 		assert.is_true(cmd_contains(jobstart_calls[1].cmd, "paste-buffer"),

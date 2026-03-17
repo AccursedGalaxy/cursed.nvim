@@ -63,8 +63,20 @@ function M.validate(config)
 		if type(config.keymaps) ~= "table" then
 			table.insert(errors, type_err("keymaps", "table", type(config.keymaps)))
 		else
+			local known_keymaps = {
+				send = true,
+				send_selection = true,
+				preview_send = true,
+				preview_close = true,
+				preview_close_esc = true,
+			}
 			for k, v in pairs(config.keymaps) do
-				if v ~= false and type(v) ~= "string" then
+				if not known_keymaps[k] then
+					vim.notify(
+						string.format("cursed: unknown keymap name '%s' — ignored (known: send, send_selection, preview_send, preview_close, preview_close_esc)", k),
+						vim.log.levels.WARN
+					)
+				elseif v ~= false and type(v) ~= "string" then
 					table.insert(errors, type_err("keymaps." .. k, "string or false", type(v)))
 				end
 			end
