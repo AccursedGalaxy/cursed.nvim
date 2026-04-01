@@ -7,7 +7,7 @@ function M.get(backend)
 	backend = backend or "tmux"
 	local ok, transport = pcall(require, "cursed.transport." .. backend)
 	if not ok then
-		error("cursed: unknown backend '" .. backend .. "' — no module cursed.transport." .. backend)
+		error("cursed: unknown backend '" .. backend .. "' — no module cursed.transport." .. backend, 2)
 	end
 	return transport
 end

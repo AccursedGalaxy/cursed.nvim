@@ -18,7 +18,4 @@ describe("cursed", function()
 		end)
 	end)
 
-	it("hello() is a callable function", function()
-		assert.is_function(cursed.hello)
-	end)
 end)

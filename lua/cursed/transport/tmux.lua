@@ -94,6 +94,8 @@ function M.send(text, opts, on_done)
 		end
 	else
 		if pre_command then
+			-- send-keys succeeds as soon as keystrokes are delivered to the pane;
+			-- it does not wait for the command to execute, so shell_error is not reliable here.
 			vim.fn.system({ "tmux", "send-keys", "-t", pane_target, pre_command, "Enter" })
 			-- Defer the paste so we don't block Neovim's main thread while
 			-- waiting for the pre-command to be processed.

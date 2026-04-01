@@ -104,8 +104,4 @@ function M.preview()
 	require("cursed.preview").open()
 end
 
-function M.hello()
-	vim.notify("cursed.nvim is alive!", vim.log.levels.INFO)
-end
-
 return M

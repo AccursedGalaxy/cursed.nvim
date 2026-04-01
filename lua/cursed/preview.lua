@@ -42,6 +42,9 @@ function M.open()
 		if vim.api.nvim_win_is_valid(win) then
 			vim.api.nvim_win_close(win, true)
 		end
+		if vim.api.nvim_buf_is_valid(buf) then
+			vim.api.nvim_buf_delete(buf, { force = true })
+		end
 	end
 
 	local function set_buf_km(lhs, rhs, desc)

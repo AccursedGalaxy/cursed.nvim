@@ -8,10 +8,6 @@ if vim.g.loaded_cursed then
 end
 vim.g.loaded_cursed = true
 
-vim.api.nvim_create_user_command("Cursed", function()
-	require("cursed").hello()
-end, { desc = "Test that cursed.nvim is working" })
-
 vim.api.nvim_create_user_command("CursedSendDiags", function(cmd_opts)
 	local arg = vim.trim(cmd_opts.args or "")
 	local opts = {}
