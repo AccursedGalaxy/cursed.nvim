@@ -17,11 +17,17 @@ function M.open()
 	local buf = vim.api.nvim_create_buf(false, true)
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(text, "\n"))
 	vim.bo[buf].filetype = "text"
+	vim.bo[buf].bufhidden = "wipe"
 	vim.bo[buf].modifiable = true
 
 	local width = math.min(100, vim.o.columns - 4)
 	local height = math.min(30, vim.o.lines - 4)
 	local km = require("cursed.config").get().keymaps or {}
+	local title_text = string.format(
+		" cursed.nvim — preview (%s send · %s cancel) ",
+		km.preview_send or "?",
+		km.preview_close or "?"
+	)
 	local win = vim.api.nvim_open_win(buf, true, {
 		relative = "editor",
 		width = width,
@@ -30,21 +36,16 @@ function M.open()
 		row = math.floor((vim.o.lines - height) / 2),
 		style = "minimal",
 		border = "rounded",
-		title = string.format(
-			" cursed.nvim — preview (%s send · %s cancel) ",
-			km.preview_send or "?",
-			km.preview_close or "?"
-		),
+		title = { { title_text, "CursedTitle" } },
 		title_pos = "center",
 	})
+	vim.wo[win].winhighlight = "Normal:CursedFloat,FloatBorder:CursedBorder"
 
 	local function close()
-		if vim.api.nvim_win_is_valid(win) then
-			vim.api.nvim_win_close(win, true)
-		end
-		if vim.api.nvim_buf_is_valid(buf) then
-			vim.api.nvim_buf_delete(buf, { force = true })
-		end
+		pcall(vim.api.nvim_win_close, win, true)
+		vim.schedule(function()
+			pcall(vim.cmd, "bwipeout! " .. buf)
+		end)
 	end
 
 	local function set_buf_km(lhs, rhs, desc)

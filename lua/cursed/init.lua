@@ -29,6 +29,7 @@ function M.setup(opts)
 	end
 
 	config._set(merged)
+	require("cursed.highlights").setup()
 
 	teardown_auto_send()
 

@@ -39,6 +39,20 @@ function M.component()
 	return ""
 end
 
+--- Return the highlight group name for the current state, or nil if idle.
+--- Useful for raw statusline integration: %#CursedStatusSent#%{…}%*
+--- @return string|nil
+function M.highlight_group()
+	if state.sending then
+		return "CursedStatusSending"
+	elseif state.last_failed_ms then
+		return "CursedStatusFailed"
+	elseif state.last_sent_ms then
+		return "CursedStatusSent"
+	end
+	return nil
+end
+
 --- lualine component table.
 --- Usage: require("lualine").setup({ sections = { lualine_x = { require("cursed.statusline").lualine } } })
 local _cached = ""
@@ -49,6 +63,9 @@ M.lualine = {
 	cond = function()
 		_cached = M.component()
 		return _cached ~= ""
+	end,
+	color = function()
+		return M.highlight_group()
 	end,
 }
 
