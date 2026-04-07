@@ -23,11 +23,8 @@ function M.open()
 	local width = math.min(100, vim.o.columns - 4)
 	local height = math.min(30, vim.o.lines - 4)
 	local km = require("cursed.config").get().keymaps or {}
-	local title_text = string.format(
-		" cursed.nvim — preview (%s send · %s cancel) ",
-		km.preview_send or "?",
-		km.preview_close or "?"
-	)
+	local title_text =
+		string.format(" cursed.nvim — preview (%s send · %s cancel) ", km.preview_send or "?", km.preview_close or "?")
 	local win = vim.api.nvim_open_win(buf, true, {
 		relative = "editor",
 		width = width,

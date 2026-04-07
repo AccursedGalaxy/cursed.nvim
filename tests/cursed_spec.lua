@@ -17,5 +17,4 @@ describe("cursed", function()
 			cursed.setup()
 		end)
 	end)
-
 end)
